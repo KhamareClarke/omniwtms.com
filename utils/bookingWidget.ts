@@ -1,5 +1,10 @@
 // Reusable booking widget utility
 export const openBookingWidget = () => {
+  // Ensure we're running in the browser
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return;
+  }
+
   // Check if modal already exists
   if (document.getElementById('booking-modal')) {
     return;
