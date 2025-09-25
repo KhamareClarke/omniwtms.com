@@ -93,17 +93,21 @@ export default function HeroSection() {
       <div className="bg-gradient-to-r from-red-600 via-red-700 to-red-800 text-white py-4 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-pulse"></div>
         <div className="container mx-auto px-4 text-center relative z-10">
-          <div className="flex flex-col md:flex-row items-center justify-center gap-4">
-            <span className="text-sm md:text-base font-bold">
+          <div className="flex flex-col items-center justify-center gap-3">
+            <span className="text-xs sm:text-sm md:text-base font-bold px-2">
               ⚡ September Offer: 20% off first 6 months for new clients
             </span>
-            <div className="flex items-center gap-2 bg-white/20 rounded-lg px-3 py-1">
-              <Clock className="h-4 w-4" />
-              <span className="font-mono font-bold text-sm">
-                {String(timeLeft.days).padStart(2, '0')}d : {String(timeLeft.hours).padStart(2, '0')}h : {String(timeLeft.minutes).padStart(2, '0')}m : {String(timeLeft.seconds).padStart(2, '0')}s
-              </span>
+            <div className="flex flex-col sm:flex-row items-center gap-3">
+              <div className="flex items-center gap-2 bg-white/20 rounded-lg px-3 py-1">
+                <Clock className="h-4 w-4" />
+                <span className="font-mono font-bold text-xs sm:text-sm">
+                  {String(timeLeft.days).padStart(2, '0')}d : {String(timeLeft.hours).padStart(2, '0')}h : {String(timeLeft.minutes).padStart(2, '0')}m : {String(timeLeft.seconds).padStart(2, '0')}s
+                </span>
+              </div>
+              <div className="bg-red-500 text-white px-3 py-1 rounded-full">
+                <span className="text-xs sm:text-sm font-bold animate-pulse">⚠️ Only 7 slots left!</span>
+              </div>
             </div>
-            <span className="text-sm font-bold animate-pulse">Only 7 slots left!</span>
           </div>
         </div>
       </div>
@@ -145,9 +149,10 @@ export default function HeroSection() {
             </div>
           </div>
 
-          {/* Social Proof Banner */}
+          {/* Social Proof Banner - Mobile Responsive */}
           <div className={`text-center mb-8 transform transition-all duration-1000 delay-100 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
-            <div className="inline-flex items-center gap-4 bg-white/80 backdrop-blur-sm rounded-full px-6 py-3 shadow-lg border border-blue-100">
+            {/* Desktop Version */}
+            <div className="hidden md:inline-flex items-center gap-4 bg-white/80 backdrop-blur-sm rounded-full px-6 py-3 shadow-lg border border-blue-100">
               <div className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-blue-600" />
                 <span className="font-bold text-blue-700">250+ UK Logistics Firms</span>
@@ -163,6 +168,24 @@ export default function HeroSection() {
               <div className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5 text-green-600" />
                 <span className="font-bold text-green-700">38% Faster Deliveries</span>
+              </div>
+            </div>
+            
+            {/* Mobile Version - Stacked */}
+            <div className="md:hidden flex flex-col gap-3 max-w-sm mx-auto">
+              <div className="flex items-center justify-center gap-2 bg-white/80 backdrop-blur-sm rounded-full px-4 py-2 shadow-lg border border-blue-100">
+                <Users className="h-4 w-4 text-blue-600" />
+                <span className="font-bold text-blue-700 text-sm">250+ UK Logistics Firms</span>
+              </div>
+              <div className="flex items-center justify-center gap-2 bg-white/80 backdrop-blur-sm rounded-full px-4 py-2 shadow-lg border border-blue-100">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} className="h-3 w-3 text-yellow-400 fill-current" />
+                ))}
+                <span className="ml-1 font-semibold text-gray-700 text-sm">4.9/5 Rating</span>
+              </div>
+              <div className="flex items-center justify-center gap-2 bg-white/80 backdrop-blur-sm rounded-full px-4 py-2 shadow-lg border border-blue-100">
+                <TrendingUp className="h-4 w-4 text-green-600" />
+                <span className="font-bold text-green-700 text-sm">38% Faster Deliveries</span>
               </div>
             </div>
           </div>
