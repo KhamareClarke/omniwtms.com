@@ -1,5 +1,6 @@
 "use client";
 
+import { Metadata } from 'next'
 import Header from "../components/layout/header";
 import HeroSection from "@/components/home/HeroSection";
 import DemoSection from "@/components/home/DemoSection";
