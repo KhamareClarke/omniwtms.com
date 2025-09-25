@@ -179,23 +179,28 @@ export default function HeroSection() {
               </div>
             </div>
             
-            {/* Mobile Version - Ultra Compact for Small Screens */}
-            <div className="md:hidden flex flex-col gap-2 max-w-[280px] mx-auto px-2">
-              {/* Compact single row for very small screens */}
-              <div className="flex items-center justify-center gap-1 bg-white/90 backdrop-blur-sm rounded-full px-2 py-1 shadow-lg border border-blue-100">
-                <Users className="h-3 w-3 text-blue-600 flex-shrink-0" />
-                <span className="font-bold text-blue-700 text-[10px] xs:text-xs truncate">250+ Firms</span>
-                <div className="w-px h-3 bg-gray-300 mx-1"></div>
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="h-2 w-2 xs:h-3 xs:w-3 text-yellow-400 fill-current" />
-                ))}
-                <span className="font-semibold text-gray-700 text-[10px] xs:text-xs">4.9</span>
+            {/* Mobile Version - Clean & Readable */}
+            <div className="md:hidden flex flex-col gap-3 max-w-sm mx-auto px-4">
+              {/* Customer Count */}
+              <div className="flex items-center justify-center gap-2 bg-blue-50 rounded-xl px-4 py-3 shadow-md">
+                <Users className="h-4 w-4 text-blue-600" />
+                <span className="font-bold text-blue-700 text-sm">250+ UK Logistics Firms</span>
               </div>
               
-              {/* Performance indicator */}
-              <div className="flex items-center justify-center gap-1 bg-green-50 backdrop-blur-sm rounded-full px-2 py-1 shadow-lg border border-green-200">
-                <TrendingUp className="h-3 w-3 text-green-600 flex-shrink-0" />
-                <span className="font-bold text-green-700 text-[10px] xs:text-xs">38% Faster Deliveries</span>
+              {/* Rating */}
+              <div className="flex items-center justify-center gap-2 bg-yellow-50 rounded-xl px-4 py-3 shadow-md">
+                <div className="flex gap-1">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="h-4 w-4 text-yellow-400 fill-current" />
+                  ))}
+                </div>
+                <span className="font-bold text-gray-700 text-sm">4.9/5 Rating</span>
+              </div>
+              
+              {/* Performance */}
+              <div className="flex items-center justify-center gap-2 bg-green-50 rounded-xl px-4 py-3 shadow-md">
+                <TrendingUp className="h-4 w-4 text-green-600" />
+                <span className="font-bold text-green-700 text-sm">38% Faster Deliveries</span>
               </div>
             </div>
           </div>
