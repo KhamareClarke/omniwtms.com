@@ -89,23 +89,31 @@ export default function HeroSection() {
         />
       </Head>
       
-      {/* Enhanced Urgency Bar with Countdown */}
-      <div className="bg-gradient-to-r from-red-600 via-red-700 to-red-800 text-white py-4 relative overflow-hidden">
+      {/* Enhanced Urgency Bar with Countdown - Ultra Mobile Responsive */}
+      <div className="bg-gradient-to-r from-red-600 via-red-700 to-red-800 text-white py-2 sm:py-4 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-pulse"></div>
-        <div className="container mx-auto px-4 text-center relative z-10">
-          <div className="flex flex-col items-center justify-center gap-3">
-            <span className="text-xs sm:text-sm md:text-base font-bold px-2">
-              ⚡ September Offer: 20% off first 6 months for new clients
+        <div className="container mx-auto px-2 sm:px-4 text-center relative z-10">
+          <div className="flex flex-col items-center justify-center gap-1 sm:gap-3">
+            {/* Offer Text - Smaller on tiny screens */}
+            <span className="text-[10px] xs:text-xs sm:text-sm md:text-base font-bold px-1 sm:px-2 leading-tight">
+              ⚡ September Offer: 20% off first 6 months
             </span>
-            <div className="flex flex-col sm:flex-row items-center gap-3">
-              <div className="flex items-center gap-2 bg-white/20 rounded-lg px-3 py-1">
-                <Clock className="h-4 w-4" />
-                <span className="font-mono font-bold text-xs sm:text-sm">
-                  {String(timeLeft.days).padStart(2, '0')}d : {String(timeLeft.hours).padStart(2, '0')}h : {String(timeLeft.minutes).padStart(2, '0')}m : {String(timeLeft.seconds).padStart(2, '0')}s
+            
+            {/* Countdown and Slots - Always stacked on mobile */}
+            <div className="flex flex-col items-center gap-1 sm:gap-2 w-full max-w-xs">
+              {/* Countdown Timer */}
+              <div className="flex items-center gap-1 sm:gap-2 bg-white/20 rounded-lg px-2 sm:px-3 py-1">
+                <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="font-mono font-bold text-[10px] xs:text-xs sm:text-sm">
+                  {String(timeLeft.days).padStart(2, '0')}d {String(timeLeft.hours).padStart(2, '0')}h {String(timeLeft.minutes).padStart(2, '0')}m
                 </span>
               </div>
-              <div className="bg-red-500 text-white px-3 py-1 rounded-full">
-                <span className="text-xs sm:text-sm font-bold animate-pulse">⚠️ Only 7 slots left!</span>
+              
+              {/* Slots Left - More prominent */}
+              <div className="bg-yellow-400 text-red-900 px-2 sm:px-3 py-1 rounded-full border-2 border-white">
+                <span className="text-[10px] xs:text-xs sm:text-sm font-black animate-pulse">
+                  ⚠️ ONLY 7 SLOTS LEFT!
+                </span>
               </div>
             </div>
           </div>
@@ -140,10 +148,10 @@ export default function HeroSection() {
         </div>
 
         <div className="container mx-auto px-4 max-w-7xl relative z-10">
-          {/* AI Tagline */}
-          <div className={`text-center mb-6 transform transition-all duration-1000 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
-            <div className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-to-r from-blue-100 via-purple-100 to-indigo-100 shadow-md">
-              <span className="text-sm md:text-base font-semibold text-blue-700 text-center">
+          {/* AI Tagline - Ultra Mobile Responsive */}
+          <div className={`text-center mb-4 sm:mb-6 transform transition-all duration-1000 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
+            <div className="inline-flex items-center px-2 sm:px-4 py-1 sm:py-2 rounded-full bg-gradient-to-r from-blue-100 via-purple-100 to-indigo-100 shadow-md max-w-[95%] mx-auto">
+              <span className="text-[10px] xs:text-xs sm:text-sm md:text-base font-semibold text-blue-700 text-center leading-tight">
                 AI-Powered UK Warehouse & Transport Management System
               </span>
             </div>
@@ -171,40 +179,42 @@ export default function HeroSection() {
               </div>
             </div>
             
-            {/* Mobile Version - Stacked */}
-            <div className="md:hidden flex flex-col gap-3 max-w-sm mx-auto">
-              <div className="flex items-center justify-center gap-2 bg-white/80 backdrop-blur-sm rounded-full px-4 py-2 shadow-lg border border-blue-100">
-                <Users className="h-4 w-4 text-blue-600" />
-                <span className="font-bold text-blue-700 text-sm">250+ UK Logistics Firms</span>
-              </div>
-              <div className="flex items-center justify-center gap-2 bg-white/80 backdrop-blur-sm rounded-full px-4 py-2 shadow-lg border border-blue-100">
+            {/* Mobile Version - Ultra Compact for Small Screens */}
+            <div className="md:hidden flex flex-col gap-2 max-w-[280px] mx-auto px-2">
+              {/* Compact single row for very small screens */}
+              <div className="flex items-center justify-center gap-1 bg-white/90 backdrop-blur-sm rounded-full px-2 py-1 shadow-lg border border-blue-100">
+                <Users className="h-3 w-3 text-blue-600 flex-shrink-0" />
+                <span className="font-bold text-blue-700 text-[10px] xs:text-xs truncate">250+ Firms</span>
+                <div className="w-px h-3 bg-gray-300 mx-1"></div>
                 {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="h-3 w-3 text-yellow-400 fill-current" />
+                  <Star key={i} className="h-2 w-2 xs:h-3 xs:w-3 text-yellow-400 fill-current" />
                 ))}
-                <span className="ml-1 font-semibold text-gray-700 text-sm">4.9/5 Rating</span>
+                <span className="font-semibold text-gray-700 text-[10px] xs:text-xs">4.9</span>
               </div>
-              <div className="flex items-center justify-center gap-2 bg-white/80 backdrop-blur-sm rounded-full px-4 py-2 shadow-lg border border-blue-100">
-                <TrendingUp className="h-4 w-4 text-green-600" />
-                <span className="font-bold text-green-700 text-sm">38% Faster Deliveries</span>
+              
+              {/* Performance indicator */}
+              <div className="flex items-center justify-center gap-1 bg-green-50 backdrop-blur-sm rounded-full px-2 py-1 shadow-lg border border-green-200">
+                <TrendingUp className="h-3 w-3 text-green-600 flex-shrink-0" />
+                <span className="font-bold text-green-700 text-[10px] xs:text-xs">38% Faster Deliveries</span>
               </div>
             </div>
           </div>
 
-          {/* Main Headlines with Enhanced Typography */}
-          <div className={`text-center mb-16 transform transition-all duration-1000 delay-300 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
-            <div className="mb-6">
-              <h1 className="text-6xl md:text-8xl font-black mb-4 bg-gradient-to-r from-blue-700 via-purple-600 to-indigo-700 text-transparent bg-clip-text leading-tight tracking-tight">
+          {/* Main Headlines with Enhanced Typography - Ultra Mobile Responsive */}
+          <div className={`text-center mb-8 sm:mb-16 transform transition-all duration-1000 delay-300 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
+            <div className="mb-4 sm:mb-6">
+              <h1 className="text-3xl xs:text-4xl sm:text-6xl md:text-8xl font-black mb-2 sm:mb-4 bg-gradient-to-r from-blue-700 via-purple-600 to-indigo-700 text-transparent bg-clip-text leading-tight tracking-tight px-2">
                 Deliver On Time.<br />
-                <span className="text-5xl md:text-7xl">Every Time.</span>
+                <span className="text-2xl xs:text-3xl sm:text-5xl md:text-7xl">Every Time.</span>
               </h1>
-              <div className="w-24 h-1 bg-gradient-to-r from-blue-600 to-purple-600 mx-auto mb-6 rounded-full"></div>
+              <div className="w-16 sm:w-24 h-1 bg-gradient-to-r from-blue-600 to-purple-600 mx-auto mb-4 sm:mb-6 rounded-full"></div>
             </div>
-            <h2 className="text-3xl md:text-5xl font-bold text-gray-800 mb-8 leading-tight">
+            <h2 className="text-lg xs:text-xl sm:text-3xl md:text-5xl font-bold text-gray-800 mb-4 sm:mb-8 leading-tight px-2">
               Total Control from <span className="text-blue-600">Warehouse</span> to <span className="text-purple-600">Doorstep</span>
             </h2>
-            <p className="text-xl md:text-2xl text-gray-700 max-w-5xl mx-auto font-medium leading-relaxed mb-8">
-              OmniWTMS is the UK's <span className="font-bold text-blue-600">fastest, most advanced</span> Warehouse & Transport Management System.<br />
-              Get <span className="font-bold text-purple-600">real-time visibility</span>, <span className="font-bold text-green-600">zero delays</span>, and <span className="font-bold text-indigo-600">full automation</span> across every warehouse, every vehicle, every order.
+            <p className="text-sm xs:text-base sm:text-xl md:text-2xl text-gray-700 max-w-5xl mx-auto font-medium leading-relaxed mb-6 sm:mb-8 px-4">
+              OmniWTMS is the UK's <span className="font-bold text-blue-600">fastest, most advanced</span> Warehouse & Transport Management System.<br className="hidden sm:block" />
+              <span className="sm:hidden"> </span>Get <span className="font-bold text-purple-600">real-time visibility</span>, <span className="font-bold text-green-600">zero delays</span>, and <span className="font-bold text-indigo-600">full automation</span> across every warehouse, every vehicle, every order.
             </p>
             
             {/* Rotating Testimonial */}
