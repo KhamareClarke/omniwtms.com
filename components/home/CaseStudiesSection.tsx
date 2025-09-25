@@ -123,12 +123,12 @@ export default function CaseStudiesSection() {
     };
     
     closeBtn.addEventListener('click', closeModal);
-    modal.addEventListener('click', (e) => {
+    modal.addEventListener('click', (e: MouseEvent) => {
       if (e.target === modal) closeModal();
     });
     
     // ESC key to close
-    const handleEsc = (e) => {
+    const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         closeModal();
         document.removeEventListener('keydown', handleEsc);
@@ -219,12 +219,12 @@ export default function CaseStudiesSection() {
     };
     
     closeBtn.addEventListener('click', closeModal);
-    modal.addEventListener('click', (e) => {
+    modal.addEventListener('click', (e: MouseEvent) => {
       if (e.target === modal) closeModal();
     });
     
     // ESC key to close
-    const handleEsc = (e) => {
+    const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         closeModal();
         document.removeEventListener('keydown', handleEsc);

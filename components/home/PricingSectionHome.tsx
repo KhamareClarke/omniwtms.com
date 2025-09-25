@@ -5,6 +5,7 @@ import CountdownSlots from "./CountdownSlots";
 import Head from "next/head";
 import { useState } from "react";
 import PlanCtaModal from "./PlanCtaModal";
+import { openBookingWidget } from "@/utils/bookingWidget";
 
 export default function PricingSectionHome() {
   const [modalOpen, setModalOpen] = useState(false);
@@ -80,100 +81,7 @@ export default function PricingSectionHome() {
                 </div>
               </div>
               <button
-                onClick={() => {
-                  // Create modal overlay
-                  const modal = document.createElement('div');
-                  modal.style.cssText = `
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: rgba(0, 0, 0, 0.8);
-                    z-index: 9999;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    padding: 20px;
-                  `;
-                  
-                  // Create modal content
-                  const modalContent = document.createElement('div');
-                  modalContent.style.cssText = `
-                    background: white;
-                    border-radius: 12px;
-                    width: 100%;
-                    max-width: 800px;
-                    max-height: 90vh;
-                    overflow: hidden;
-                    position: relative;
-                  `;
-                  
-                  // Create close button
-                  const closeBtn = document.createElement('button');
-                  closeBtn.innerHTML = '×';
-                  closeBtn.style.cssText = `
-                    position: absolute;
-                    top: 10px;
-                    right: 15px;
-                    background: none;
-                    border: none;
-                    font-size: 24px;
-                    cursor: pointer;
-                    z-index: 10000;
-                    color: #666;
-                    width: 30px;
-                    height: 30px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                  `;
-                  
-                  // Create iframe
-                  const iframe = document.createElement('iframe');
-                  iframe.src = 'https://api.khamareclarke.com/widget/booking/C3V3xCg4c0WkU16zh5Xf';
-                  iframe.style.cssText = `
-                    width: 100%;
-                    height: 600px;
-                    border: none;
-                    overflow: hidden;
-                  `;
-                  iframe.scrolling = 'no';
-                  iframe.id = 'C3V3xCg4c0WkU16zh5Xf_' + Date.now();
-                  
-                  // Assemble modal
-                  modalContent.appendChild(closeBtn);
-                  modalContent.appendChild(iframe);
-                  modal.appendChild(modalContent);
-                  document.body.appendChild(modal);
-                  
-                  // Load the booking script
-                  if (!document.querySelector('script[src="https://api.khamareclarke.com/js/form_embed.js"]')) {
-                    const script = document.createElement('script');
-                    script.src = 'https://api.khamareclarke.com/js/form_embed.js';
-                    script.type = 'text/javascript';
-                    document.head.appendChild(script);
-                  }
-                  
-                  // Close modal handlers
-                  const closeModal = () => {
-                    document.body.removeChild(modal);
-                  };
-                  
-                  closeBtn.addEventListener('click', closeModal);
-                  modal.addEventListener('click', (e: MouseEvent) => {
-                    if (e.target === modal) closeModal();
-                  });
-                  
-                  // ESC key to close
-                  const handleEsc = (e: KeyboardEvent) => {
-                    if (e.key === 'Escape') {
-                      closeModal();
-                      document.removeEventListener('keydown', handleEsc);
-                    }
-                  };
-                  document.addEventListener('keydown', handleEsc);
-                }}
+                onClick={openBookingWidget}
                 className="mt-auto inline-block px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-lg shadow-lg hover:scale-105 transition-all duration-300 border-0 text-center cursor-pointer w-full"
               >
                 Secure Plan
@@ -227,100 +135,7 @@ export default function PricingSectionHome() {
                 </div>
               </div>
               <button
-                onClick={() => {
-                  // Create modal overlay
-                  const modal = document.createElement('div');
-                  modal.style.cssText = `
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: rgba(0, 0, 0, 0.8);
-                    z-index: 9999;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    padding: 20px;
-                  `;
-                  
-                  // Create modal content
-                  const modalContent = document.createElement('div');
-                  modalContent.style.cssText = `
-                    background: white;
-                    border-radius: 12px;
-                    width: 100%;
-                    max-width: 800px;
-                    max-height: 90vh;
-                    overflow: hidden;
-                    position: relative;
-                  `;
-                  
-                  // Create close button
-                  const closeBtn = document.createElement('button');
-                  closeBtn.innerHTML = '×';
-                  closeBtn.style.cssText = `
-                    position: absolute;
-                    top: 10px;
-                    right: 15px;
-                    background: none;
-                    border: none;
-                    font-size: 24px;
-                    cursor: pointer;
-                    z-index: 10000;
-                    color: #666;
-                    width: 30px;
-                    height: 30px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                  `;
-                  
-                  // Create iframe
-                  const iframe = document.createElement('iframe');
-                  iframe.src = 'https://api.khamareclarke.com/widget/booking/C3V3xCg4c0WkU16zh5Xf';
-                  iframe.style.cssText = `
-                    width: 100%;
-                    height: 600px;
-                    border: none;
-                    overflow: hidden;
-                  `;
-                  iframe.scrolling = 'no';
-                  iframe.id = 'C3V3xCg4c0WkU16zh5Xf_' + Date.now();
-                  
-                  // Assemble modal
-                  modalContent.appendChild(closeBtn);
-                  modalContent.appendChild(iframe);
-                  modal.appendChild(modalContent);
-                  document.body.appendChild(modal);
-                  
-                  // Load the booking script
-                  if (!document.querySelector('script[src="https://api.khamareclarke.com/js/form_embed.js"]')) {
-                    const script = document.createElement('script');
-                    script.src = 'https://api.khamareclarke.com/js/form_embed.js';
-                    script.type = 'text/javascript';
-                    document.head.appendChild(script);
-                  }
-                  
-                  // Close modal handlers
-                  const closeModal = () => {
-                    document.body.removeChild(modal);
-                  };
-                  
-                  closeBtn.addEventListener('click', closeModal);
-                  modal.addEventListener('click', (e: MouseEvent) => {
-                    if (e.target === modal) closeModal();
-                  });
-                  
-                  // ESC key to close
-                  const handleEsc = (e: KeyboardEvent) => {
-                    if (e.key === 'Escape') {
-                      closeModal();
-                      document.removeEventListener('keydown', handleEsc);
-                    }
-                  };
-                  document.addEventListener('keydown', handleEsc);
-                }}
+                onClick={openBookingWidget}
                 className="mt-auto inline-block px-6 py-3 bg-gradient-to-r from-yellow-400 to-yellow-600 text-white font-bold rounded-lg shadow-lg hover:scale-105 transition-all duration-300 border-0 text-center cursor-pointer w-full"
               >
                 Secure Growth
@@ -374,100 +189,7 @@ export default function PricingSectionHome() {
                 </div>
               </div>
               <button
-                onClick={() => {
-                  // Create modal overlay
-                  const modal = document.createElement('div');
-                  modal.style.cssText = `
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    background: rgba(0, 0, 0, 0.8);
-                    z-index: 9999;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    padding: 20px;
-                  `;
-                  
-                  // Create modal content
-                  const modalContent = document.createElement('div');
-                  modalContent.style.cssText = `
-                    background: white;
-                    border-radius: 12px;
-                    width: 100%;
-                    max-width: 800px;
-                    max-height: 90vh;
-                    overflow: hidden;
-                    position: relative;
-                  `;
-                  
-                  // Create close button
-                  const closeBtn = document.createElement('button');
-                  closeBtn.innerHTML = '×';
-                  closeBtn.style.cssText = `
-                    position: absolute;
-                    top: 10px;
-                    right: 15px;
-                    background: none;
-                    border: none;
-                    font-size: 24px;
-                    cursor: pointer;
-                    z-index: 10000;
-                    color: #666;
-                    width: 30px;
-                    height: 30px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                  `;
-                  
-                  // Create iframe
-                  const iframe = document.createElement('iframe');
-                  iframe.src = 'https://api.khamareclarke.com/widget/booking/C3V3xCg4c0WkU16zh5Xf';
-                  iframe.style.cssText = `
-                    width: 100%;
-                    height: 600px;
-                    border: none;
-                    overflow: hidden;
-                  `;
-                  iframe.scrolling = 'no';
-                  iframe.id = 'C3V3xCg4c0WkU16zh5Xf_' + Date.now();
-                  
-                  // Assemble modal
-                  modalContent.appendChild(closeBtn);
-                  modalContent.appendChild(iframe);
-                  modal.appendChild(modalContent);
-                  document.body.appendChild(modal);
-                  
-                  // Load the booking script
-                  if (!document.querySelector('script[src="https://api.khamareclarke.com/js/form_embed.js"]')) {
-                    const script = document.createElement('script');
-                    script.src = 'https://api.khamareclarke.com/js/form_embed.js';
-                    script.type = 'text/javascript';
-                    document.head.appendChild(script);
-                  }
-                  
-                  // Close modal handlers
-                  const closeModal = () => {
-                    document.body.removeChild(modal);
-                  };
-                  
-                  closeBtn.addEventListener('click', closeModal);
-                  modal.addEventListener('click', (e: MouseEvent) => {
-                    if (e.target === modal) closeModal();
-                  });
-                  
-                  // ESC key to close
-                  const handleEsc = (e: KeyboardEvent) => {
-                    if (e.key === 'Escape') {
-                      closeModal();
-                      document.removeEventListener('keydown', handleEsc);
-                    }
-                  };
-                  document.addEventListener('keydown', handleEsc);
-                }}
+                onClick={openBookingWidget}
                 className="mt-auto inline-block px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold rounded-lg shadow-lg hover:scale-105 transition-all duration-300 border-0 text-center cursor-pointer w-full"
               >
                 Talk to Sales
