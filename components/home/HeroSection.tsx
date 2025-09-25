@@ -179,28 +179,22 @@ export default function HeroSection() {
               </div>
             </div>
             
-            {/* Mobile Version - Clean & Readable */}
-            <div className="md:hidden flex flex-col gap-3 max-w-sm mx-auto px-4">
-              {/* Customer Count */}
-              <div className="flex items-center justify-center gap-2 bg-blue-50 rounded-xl px-4 py-3 shadow-md">
-                <Users className="h-4 w-4 text-blue-600" />
-                <span className="font-bold text-blue-700 text-sm">250+ UK Logistics Firms</span>
-              </div>
-              
-              {/* Rating */}
-              <div className="flex items-center justify-center gap-2 bg-yellow-50 rounded-xl px-4 py-3 shadow-md">
-                <div className="flex gap-1">
+            {/* Mobile Version - Ultra Compact Single Line */}
+            <div className="md:hidden flex items-center justify-center gap-1 max-w-[320px] mx-auto px-2">
+              {/* All-in-one compact badge */}
+              <div className="flex items-center gap-1 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1.5 shadow-md border border-gray-200 text-xs">
+                <Users className="h-3 w-3 text-blue-600 flex-shrink-0" />
+                <span className="font-semibold text-blue-700">250+</span>
+                <div className="w-px h-3 bg-gray-300 mx-1"></div>
+                <div className="flex gap-0.5">
                   {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="h-4 w-4 text-yellow-400 fill-current" />
+                    <Star key={i} className="h-2.5 w-2.5 text-yellow-400 fill-current" />
                   ))}
                 </div>
-                <span className="font-bold text-gray-700 text-sm">4.9/5 Rating</span>
-              </div>
-              
-              {/* Performance */}
-              <div className="flex items-center justify-center gap-2 bg-green-50 rounded-xl px-4 py-3 shadow-md">
-                <TrendingUp className="h-4 w-4 text-green-600" />
-                <span className="font-bold text-green-700 text-sm">38% Faster Deliveries</span>
+                <span className="font-semibold text-gray-700">4.9</span>
+                <div className="w-px h-3 bg-gray-300 mx-1"></div>
+                <TrendingUp className="h-3 w-3 text-green-600 flex-shrink-0" />
+                <span className="font-semibold text-green-700">38%↑</span>
               </div>
             </div>
           </div>
