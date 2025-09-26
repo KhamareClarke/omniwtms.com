@@ -1,15 +1,18 @@
 {
-  "name": "OmniWTMS - AI-Powered Warehouse & Transport Management System",
+  "name": "OmniWTMS",
   "short_name": "OmniWTMS",
-  "description": "UK's most advanced AI-powered Warehouse & Transport Management System. 250+ logistics firms trust us for real-time visibility, zero delays, and full automation.",
+  "description": "AI-Powered Warehouse & Transport Management System",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#2563eb",
-  "orientation": "portrait-primary",
-  "categories": ["business", "productivity", "logistics"],
-  "lang": "en-GB",
   "icons": [
+    {
+      "src": "/omniwtms.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
     {
       "src": "/android-chrome-192x192.png",
       "sizes": "192x192",
