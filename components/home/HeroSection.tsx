@@ -89,31 +89,31 @@ export default function HeroSection() {
         />
       </Head>
       
-      {/* Add Pixel 8 optimized spacing to prevent header overlap */}
+      {/* Pixel 8 optimized spacing to prevent header overlap */}
       <div className="h-[88px] md:hidden"></div>
       
-      {/* Original Urgency Bar with Countdown - Simple and Clean */}
-      <div className="bg-gradient-to-r from-red-600 via-red-700 to-red-800 text-white py-2 sm:py-3 relative overflow-hidden">
+      {/* Urgency Bar - Fixed at top for all screen sizes */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-red-600 via-red-700 to-red-800 text-white shadow-lg">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col items-center justify-center text-center">
-            {/* Countdown and Slots - Simple Row on Desktop */}
-            <div className="flex flex-col md:flex-row items-center justify-center gap-3 w-full">
-              {/* Countdown Timer */}
-              <div className="flex items-center gap-2 bg-white/20 rounded-full px-3 py-1">
-                <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="font-mono font-bold text-xs sm:text-sm">
-                  {String(timeLeft.days).padStart(2, '0')}d {String(timeLeft.hours).padStart(2, '0')}h {String(timeLeft.minutes).padStart(2, '0')}m
-                </span>
-              </div>
-              
-              {/* Slots Left - Simple Badge */}
-              <div className="bg-yellow-400 text-red-900 px-3 py-1 rounded-full font-bold text-sm whitespace-nowrap">
-                🚨 ONLY 7 SLOTS LEFT! 🚨
-              </div>
+          <div className="flex items-center justify-between py-2">
+            {/* Left side - Countdown */}
+            <div className="flex items-center gap-2 bg-white/20 rounded-full px-4 py-1.5">
+              <Clock className="h-4 w-4" />
+              <span className="font-mono font-bold text-sm">
+                {String(timeLeft.days).padStart(2, '0')}d {String(timeLeft.hours).padStart(2, '0')}h {String(timeLeft.minutes).padStart(2, '0')}m
+              </span>
+            </div>
+            
+            {/* Right side - Slots Left */}
+            <div className="bg-yellow-400 text-red-900 px-4 py-1.5 rounded-full font-bold text-sm whitespace-nowrap">
+              🚨 ONLY 7 SLOTS LEFT! 🚨
             </div>
           </div>
         </div>
       </div>
+      
+      {/* Add spacing to push content below fixed header */}
+      <div className="h-16"></div>
 
       <section className="relative py-20 bg-gradient-to-br from-blue-50 via-white to-indigo-50 overflow-hidden">
         {/* Enhanced Background with Logistics Elements */}
