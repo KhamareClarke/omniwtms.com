@@ -109,13 +109,18 @@ export default function HeroSection() {
                 </span>
               </div>
               
-              {/* Slots Left - More prominent and always visible on mobile */}
-              <div className="bg-yellow-400 text-red-900 px-3 sm:px-4 py-1.5 sm:py-1 rounded-full border-2 border-white mt-1 sm:mt-2 shadow-lg shadow-yellow-400/30">
-                <span className="text-xs xs:text-sm sm:text-base font-black animate-pulse flex items-center justify-center gap-1">
-                  <span className="inline-block animate-bounce">🚨</span>
-                  <span>ONLY 7 SLOTS LEFT!</span>
-                  <span className="inline-block animate-pulse">🚨</span>
-                </span>
+              {/* Slots Left - Prominent but not fixed */}
+              <div className="w-full bg-gradient-to-r from-red-600 to-red-700 text-white py-3 px-4 rounded-lg shadow-lg md:rounded-full md:bg-yellow-400 md:text-red-900 md:py-2">
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-xl md:text-base animate-pulse">🚨</span>
+                  <span className="font-extrabold text-center text-base md:text-sm">
+                    ONLY 7 SLOTS LEFT! - LIMITED TIME OFFER
+                  </span>
+                  <span className="text-xl md:text-base animate-pulse">🚨</span>
+                </div>
+                <div className="text-center text-sm mt-1 md:hidden">
+                  Claim your spot before time runs out! ⏳
+                </div>
               </div>
             </div>
           </div>
