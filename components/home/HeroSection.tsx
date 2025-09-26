@@ -89,11 +89,11 @@ export default function HeroSection() {
         />
       </Head>
       
-      {/* Add spacing to prevent header overlap */}
-      <div className="h-[70px] md:hidden"></div>
+      {/* Add Pixel 8 optimized spacing to prevent header overlap */}
+      <div className="h-[88px] md:hidden"></div>
       
       {/* Enhanced Urgency Bar with Countdown - Ultra Mobile Responsive */}
-      <div className="bg-gradient-to-r from-red-600 via-red-700 to-red-800 text-white py-3 sm:py-4 relative overflow-hidden border-b-4 border-yellow-400 shadow-lg">
+      <div className="bg-gradient-to-r from-red-600 via-red-700 to-red-800 text-white py-3 sm:py-4 relative overflow-hidden border-b-4 border-yellow-400 shadow-lg pt-1">
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent animate-pulse"></div>
         <div className="absolute top-0 left-0 right-0 h-1 bg-yellow-400 animate-pulse"></div>
         <div className="container mx-auto px-2 sm:px-4 text-center relative z-10">
