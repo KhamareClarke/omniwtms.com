@@ -89,19 +89,19 @@ export default function HeroSection() {
         />
       </Head>
       
-      {/* Mobile Spacer */}
-      <div className="h-16 md:h-24"></div>
+      {/* Mobile header spacing */}
+      <div className="h-20 md:h-24"></div>
       
-      {/* Urgency Bar - Fixed at top for visibility */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-red-600 text-white shadow-lg">
-        <div className="w-full max-w-7xl mx-auto px-4">
-          <div className="flex items-center justify-center py-3">
-            <div className="bg-yellow-400 text-red-900 px-6 py-3 rounded-full font-black text-lg whitespace-nowrap text-center border-4 border-yellow-300 shadow-lg">
-              <span className="inline-flex items-center">
-                <span className="text-2xl animate-pulse">🚨</span>
-                <span className="mx-3 tracking-wider">ONLY 7 SLOTS LEFT!</span>
-                <span className="text-2xl animate-pulse">🚨</span>
-              </span>
+      {/* Urgency Bar - Prominent mobile visibility */}
+      <div className="w-full bg-red-600 text-white shadow-xl border-b-4 border-yellow-400">
+        <div className="w-full px-2 py-4">
+          <div className="flex items-center justify-center">
+            <div className="bg-yellow-400 text-red-900 px-8 py-4 rounded-2xl font-black text-xl whitespace-nowrap text-center border-4 border-yellow-300 shadow-2xl transform hover:scale-105 transition-transform">
+              <div className="flex items-center justify-center">
+                <span className="text-3xl animate-bounce mr-3">🚨</span>
+                <span className="tracking-widest">ONLY 7 SLOTS LEFT!</span>
+                <span className="text-3xl animate-bounce ml-3">🚨</span>
+              </div>
             </div>
           </div>
         </div>
