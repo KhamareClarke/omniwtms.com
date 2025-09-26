@@ -95,17 +95,9 @@ export default function HeroSection() {
       {/* Urgency Bar - Below header */}
       <div className="w-full bg-gradient-to-r from-red-600 via-red-700 to-red-800 text-white shadow-lg">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row items-center justify-between py-2 gap-2">
-            {/* Left side - Countdown */}
-            <div className="flex items-center gap-2 bg-white/20 rounded-full px-4 py-1.5">
-              <Clock className="h-4 w-4" />
-              <span className="font-mono font-bold text-sm">
-                {String(timeLeft.days).padStart(2, '0')}d {String(timeLeft.hours).padStart(2, '0')}h {String(timeLeft.minutes).padStart(2, '0')}m
-              </span>
-            </div>
-            
-            {/* Right side - Slots Left */}
-            <div className="bg-yellow-400 text-red-900 px-4 py-1.5 rounded-full font-bold text-sm whitespace-nowrap">
+          <div className="flex items-center justify-center py-2">
+            {/* Centered Slots Left */}
+            <div className="bg-yellow-400 text-red-900 px-6 py-2 rounded-full font-bold text-sm sm:text-base whitespace-nowrap">
               🚨 ONLY 7 SLOTS LEFT! 🚨
             </div>
           </div>
