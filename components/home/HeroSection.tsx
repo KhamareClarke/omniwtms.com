@@ -98,11 +98,6 @@ export default function HeroSection() {
           <div className="flex flex-col items-center justify-center text-center">
             {/* Countdown and Slots - Simple Row on Desktop */}
             <div className="flex flex-col md:flex-row items-center justify-center gap-3 w-full">
-              {/* Offer Text */}
-              <span className="text-xs sm:text-sm font-medium">
-                ⚡ September Offer: 20% off first 6 months
-              </span>
-              
               {/* Countdown Timer */}
               <div className="flex items-center gap-2 bg-white/20 rounded-full px-3 py-1">
                 <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
