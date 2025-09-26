@@ -92,64 +92,28 @@ export default function HeroSection() {
       {/* Add Pixel 8 optimized spacing to prevent header overlap */}
       <div className="h-[88px] md:hidden"></div>
       
-      {/* Enhanced Urgency Bar with Countdown - Responsive Design */}
-      <div className="bg-gradient-to-r from-red-600 via-red-700 to-red-800 text-white relative overflow-hidden border-b-4 border-yellow-400 shadow-lg md:py-0">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent animate-pulse"></div>
-        <div className="absolute top-0 left-0 right-0 h-1 bg-yellow-400 animate-pulse"></div>
-        <div className="container mx-auto px-2 sm:px-4 relative z-10">
-          <div className="flex flex-col md:flex-row items-center justify-between py-2">
-            {/* Left Side - Offer Text */}
-            <div className="hidden md:flex items-center">
-              <span className="text-sm font-semibold bg-white/10 px-4 py-1 rounded-full">
-                🚀 September Special: 20% OFF First 6 Months
+      {/* Original Urgency Bar with Countdown - Simple and Clean */}
+      <div className="bg-gradient-to-r from-red-600 via-red-700 to-red-800 text-white py-2 sm:py-3 relative overflow-hidden">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col items-center justify-center text-center">
+            {/* Countdown and Slots - Simple Row on Desktop */}
+            <div className="flex flex-col md:flex-row items-center justify-center gap-3 w-full">
+              {/* Offer Text */}
+              <span className="text-xs sm:text-sm font-medium">
+                ⚡ September Offer: 20% off first 6 months
               </span>
-            </div>
-            
-            {/* Mobile Offer Text */}
-            <span className="md:hidden text-xs font-bold py-1">
-              ⚡ September Offer: 20% off first 6 months
-            </span>
-            
-            {/* Right Side - Countdown and Slots */}
-            <div className="flex items-center gap-4">
-              {/* Desktop Countdown */}
-              <div className="hidden md:flex items-center gap-2 bg-white/20 rounded-full px-4 py-1.5">
-                <Clock className="h-4 w-4" />
-                <span className="font-mono font-bold text-sm">
+              
+              {/* Countdown Timer */}
+              <div className="flex items-center gap-2 bg-white/20 rounded-full px-3 py-1">
+                <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="font-mono font-bold text-xs sm:text-sm">
                   {String(timeLeft.days).padStart(2, '0')}d {String(timeLeft.hours).padStart(2, '0')}h {String(timeLeft.minutes).padStart(2, '0')}m
                 </span>
               </div>
               
-              {/* Mobile Countdown */}
-              <div className="md:hidden flex items-center gap-1 bg-white/20 rounded-lg px-2 py-1">
-                <Clock className="h-3 w-3" />
-                <span className="font-mono font-bold text-xs">
-                  {String(timeLeft.days).padStart(2, '0')}d {String(timeLeft.hours).padStart(2, '0')}h {String(timeLeft.minutes).padStart(2, '0')}m
-                </span>
-              </div>
-              
-              {/* Slots Left - Desktop */}
-              <div className="hidden md:block bg-yellow-400 text-red-900 px-6 py-2 rounded-full border-2 border-yellow-500 shadow-lg hover:shadow-xl transition-shadow duration-300">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg animate-pulse">🚨</span>
-                  <span className="font-bold text-sm tracking-wide whitespace-nowrap">
-                    ONLY 7 SLOTS LEFT!
-                  </span>
-                </div>
-              </div>
-              
-              {/* Slots Left - Mobile */}
-              <div className="md:hidden w-full bg-gradient-to-r from-red-700 via-red-600 to-red-700 text-white py-2 px-4 rounded-lg shadow-xl border-2 border-yellow-400">
-                <div className="flex items-center justify-center gap-2">
-                  <span className="text-xl animate-bounce">🚨</span>
-                  <span className="font-black text-sm tracking-wide uppercase">
-                    ONLY 7 SLOTS LEFT!
-                  </span>
-                  <span className="text-xl animate-bounce">🚨</span>
-                </div>
-                <div className="text-center text-xs font-bold text-yellow-200 animate-pulse mt-1">
-                  LIMITED TIME OFFER! ⏳
-                </div>
+              {/* Slots Left - Simple Badge */}
+              <div className="bg-yellow-400 text-red-900 px-3 py-1 rounded-full font-bold text-sm whitespace-nowrap">
+                🚨 ONLY 7 SLOTS LEFT! 🚨
               </div>
             </div>
           </div>
