@@ -1,7 +1,32 @@
 {
-  "name": "nextjs",
-  "version": "0.1.0",
-  "private": true,
+  "name": "omniwtms",
+  "version": "1.0.0",
+  "description": "The UK's fastest, most advanced Warehouse & Transport Management System - Real-time visibility, zero delays, and full automation across warehouses, vehicles, and orders.",
+  "author": "Khamare Clarke <khamare@omniwtms.com>",
+  "license": "MIT",
+  "homepage": "https://omniwtms.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/KhamareClarke/omniwtms.com.git"
+  },
+  "bugs": {
+    "url": "https://github.com/KhamareClarke/omniwtms.com/issues"
+  },
+  "keywords": [
+    "warehouse-management",
+    "transport-management",
+    "logistics",
+    "supply-chain",
+    "inventory-management",
+    "route-optimization",
+    "real-time-tracking",
+    "nextjs",
+    "typescript",
+    "supabase",
+    "ai-powered",
+    "uk-logistics"
+  ],
+  "private": false,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
