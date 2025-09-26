@@ -89,8 +89,8 @@ export default function HeroSection() {
         />
       </Head>
       
-      {/* Mobile header spacing */}
-      <div className="h-20 md:h-24"></div>
+      {/* Header spacing - ensure urgency bar appears below header */}
+      <div className="h-24 md:h-28"></div>
       
       {/* Urgency Bar - Prominent mobile visibility */}
       <div className="w-full bg-red-600 text-white shadow-xl border-b-4 border-yellow-400">
