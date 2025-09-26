@@ -90,8 +90,9 @@ export default function HeroSection() {
       </Head>
       
       {/* Enhanced Urgency Bar with Countdown - Ultra Mobile Responsive */}
-      <div className="bg-gradient-to-r from-red-600 via-red-700 to-red-800 text-white py-2 sm:py-4 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-pulse"></div>
+      <div className="bg-gradient-to-r from-red-600 via-red-700 to-red-800 text-white py-3 sm:py-4 relative overflow-hidden border-b-4 border-yellow-400 shadow-lg">
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent animate-pulse"></div>
+        <div className="absolute top-0 left-0 right-0 h-1 bg-yellow-400 animate-pulse"></div>
         <div className="container mx-auto px-2 sm:px-4 text-center relative z-10">
           <div className="flex flex-col items-center justify-center gap-1 sm:gap-3">
             {/* Offer Text - Smaller on tiny screens */}
@@ -109,17 +110,19 @@ export default function HeroSection() {
                 </span>
               </div>
               
-              {/* Slots Left - Prominent but not fixed */}
-              <div className="w-full bg-gradient-to-r from-red-600 to-red-700 text-white py-3 px-4 rounded-lg shadow-lg md:rounded-full md:bg-yellow-400 md:text-red-900 md:py-2">
-                <div className="flex items-center justify-center gap-2">
-                  <span className="text-xl md:text-base animate-pulse">🚨</span>
-                  <span className="font-extrabold text-center text-base md:text-sm">
-                    ONLY 7 SLOTS LEFT! - LIMITED TIME OFFER
-                  </span>
-                  <span className="text-xl md:text-base animate-pulse">🚨</span>
-                </div>
-                <div className="text-center text-sm mt-1 md:hidden">
-                  Claim your spot before time runs out! ⏳
+              {/* Slots Left - Super Prominent */}
+              <div className="w-full bg-gradient-to-r from-red-700 via-red-600 to-red-700 text-white py-3 px-4 rounded-lg shadow-xl border-2 border-yellow-400 transform hover:scale-[1.02] transition-transform duration-300 md:rounded-full md:bg-yellow-400 md:border-yellow-500 md:text-red-900 md:py-2">
+                <div className="flex flex-col items-center justify-center">
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <span className="text-2xl md:text-lg animate-bounce">🚨</span>
+                    <span className="font-black text-center text-lg md:text-base tracking-wide uppercase">
+                      ONLY 7 SLOTS LEFT!
+                    </span>
+                    <span className="text-2xl md:text-lg animate-bounce">🚨</span>
+                  </div>
+                  <div className="text-center text-sm font-bold text-yellow-200 md:text-yellow-800 animate-pulse">
+                    LIMITED TIME OFFER - CLAIM YOUR SPOT NOW! ⏳
+                  </div>
                 </div>
               </div>
             </div>
