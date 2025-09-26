@@ -109,10 +109,12 @@ export default function HeroSection() {
                 </span>
               </div>
               
-              {/* Slots Left - More prominent */}
-              <div className="bg-yellow-400 text-red-900 px-2 sm:px-3 py-1 rounded-full border-2 border-white mt-1 sm:mt-2">
-                <span className="text-[10px] xs:text-xs sm:text-sm font-black animate-pulse">
-                  ⚠️ ONLY 7 SLOTS LEFT!
+              {/* Slots Left - More prominent and always visible on mobile */}
+              <div className="bg-yellow-400 text-red-900 px-3 sm:px-4 py-1.5 sm:py-1 rounded-full border-2 border-white mt-1 sm:mt-2 shadow-lg shadow-yellow-400/30">
+                <span className="text-xs xs:text-sm sm:text-base font-black animate-pulse flex items-center justify-center gap-1">
+                  <span className="inline-block animate-bounce">🚨</span>
+                  <span>ONLY 7 SLOTS LEFT!</span>
+                  <span className="inline-block animate-pulse">🚨</span>
                 </span>
               </div>
             </div>
