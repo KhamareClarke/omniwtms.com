@@ -92,14 +92,14 @@ export default function HeroSection() {
       {/* Pixel 8 optimized spacing to prevent header overlap */}
       <div className="hidden md:block h-24"></div>
       
-      {/* Urgency Bar - Below header */}
+      {/* Urgency Bar - Below header - Enhanced for mobile */}
       <div className="w-full bg-gradient-to-r from-red-600 via-red-700 to-red-800 text-white shadow-lg">
-        <div className="w-full flex justify-center items-center py-3 sm:py-2 px-4">
-          <div className="bg-yellow-400 text-red-900 px-4 sm:px-6 py-2 rounded-full font-bold text-sm sm:text-base whitespace-nowrap text-center">
+        <div className="w-full flex justify-center items-center p-2 sm:py-2 sm:px-4">
+          <div className="bg-yellow-400 text-red-900 px-5 sm:px-6 py-2.5 sm:py-2 rounded-full font-extrabold text-base sm:text-lg whitespace-nowrap text-center border-2 border-yellow-300 shadow-md">
             <span className="inline-flex items-center">
-              <span className="animate-pulse">🚨</span>
-              <span className="mx-1">ONLY 7 SLOTS LEFT!</span>
-              <span className="animate-pulse">🚨</span>
+              <span className="text-xl animate-pulse">🚨</span>
+              <span className="mx-2 tracking-wide">ONLY 7 SLOTS LEFT!</span>
+              <span className="text-xl animate-pulse">🚨</span>
             </span>
           </div>
         </div>
