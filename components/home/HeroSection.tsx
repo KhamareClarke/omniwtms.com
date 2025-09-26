@@ -90,12 +90,12 @@ export default function HeroSection() {
       </Head>
       
       {/* Pixel 8 optimized spacing to prevent header overlap */}
-      <div className="h-[88px] md:hidden"></div>
+      <div className="hidden md:block h-24"></div>
       
-      {/* Urgency Bar - Fixed at top for all screen sizes */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-red-600 via-red-700 to-red-800 text-white shadow-lg">
+      {/* Urgency Bar - Below header */}
+      <div className="w-full bg-gradient-to-r from-red-600 via-red-700 to-red-800 text-white shadow-lg">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between py-2">
+          <div className="flex flex-col md:flex-row items-center justify-between py-2 gap-2">
             {/* Left side - Countdown */}
             <div className="flex items-center gap-2 bg-white/20 rounded-full px-4 py-1.5">
               <Clock className="h-4 w-4" />
@@ -111,9 +111,6 @@ export default function HeroSection() {
           </div>
         </div>
       </div>
-      
-      {/* Add spacing to push content below fixed header */}
-      <div className="h-16"></div>
 
       <section className="relative py-20 bg-gradient-to-br from-blue-50 via-white to-indigo-50 overflow-hidden">
         {/* Enhanced Background with Logistics Elements */}
