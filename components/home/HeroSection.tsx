@@ -179,22 +179,20 @@ export default function HeroSection() {
               </div>
             </div>
             
-            {/* Mobile Version - Ultra Compact Single Line */}
-            <div className="md:hidden flex items-center justify-center gap-1 max-w-[320px] mx-auto px-2">
-              {/* All-in-one compact badge */}
-              <div className="flex items-center gap-1 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1.5 shadow-md border border-gray-200 text-xs">
-                <Users className="h-3 w-3 text-blue-600 flex-shrink-0" />
-                <span className="font-semibold text-blue-700">250+</span>
-                <div className="w-px h-3 bg-gray-300 mx-1"></div>
-                <div className="flex gap-0.5">
+            {/* Mobile Version - Minimal Badge */}
+            <div className="md:hidden flex items-center justify-center mb-2">
+              {/* Tiny trust badge */}
+              <div className="flex items-center gap-1 bg-white/80 rounded-full px-2 py-0.5 shadow-sm text-[10px] border border-gray-100">
+                <Users className="h-2 w-2 text-blue-600" />
+                <span className="font-medium text-blue-700">250+</span>
+                <div className="flex gap-0.5 mx-1">
                   {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="h-2.5 w-2.5 text-yellow-400 fill-current" />
+                    <Star key={i} className="h-1.5 w-1.5 text-yellow-400 fill-current" />
                   ))}
                 </div>
-                <span className="font-semibold text-gray-700">4.9</span>
-                <div className="w-px h-3 bg-gray-300 mx-1"></div>
-                <TrendingUp className="h-3 w-3 text-green-600 flex-shrink-0" />
-                <span className="font-semibold text-green-700">38%↑</span>
+                <span className="font-medium text-gray-600">4.9</span>
+                <TrendingUp className="h-2 w-2 text-green-600 ml-1" />
+                <span className="font-medium text-green-700">38%</span>
               </div>
             </div>
           </div>
