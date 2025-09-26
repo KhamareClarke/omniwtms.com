@@ -110,7 +110,7 @@ export default function HeroSection() {
               </div>
               
               {/* Slots Left - More prominent */}
-              <div className="bg-yellow-400 text-red-900 px-2 sm:px-3 py-1 rounded-full border-2 border-white">
+              <div className="bg-yellow-400 text-red-900 px-2 sm:px-3 py-1 rounded-full border-2 border-white mt-1 sm:mt-2">
                 <span className="text-[10px] xs:text-xs sm:text-sm font-black animate-pulse">
                   ⚠️ ONLY 7 SLOTS LEFT!
                 </span>
