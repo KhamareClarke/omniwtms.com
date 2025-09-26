@@ -94,9 +94,13 @@ export default function HeroSection() {
       
       {/* Urgency Bar - Below header */}
       <div className="w-full bg-gradient-to-r from-red-600 via-red-700 to-red-800 text-white shadow-lg">
-        <div className="w-full flex justify-center items-center py-2">
-          <div className="bg-yellow-400 text-red-900 px-6 py-2 rounded-full font-bold text-sm sm:text-base whitespace-nowrap text-center">
-            🚨 ONLY 7 SLOTS LEFT! 🚨
+        <div className="w-full flex justify-center items-center py-3 sm:py-2 px-4">
+          <div className="bg-yellow-400 text-red-900 px-4 sm:px-6 py-2 rounded-full font-bold text-sm sm:text-base whitespace-nowrap text-center">
+            <span className="inline-flex items-center">
+              <span className="animate-pulse">🚨</span>
+              <span className="mx-1">ONLY 7 SLOTS LEFT!</span>
+              <span className="animate-pulse">🚨</span>
+            </span>
           </div>
         </div>
       </div>
