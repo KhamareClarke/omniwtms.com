@@ -94,13 +94,13 @@ export default function HeroSection() {
       
       {/* Urgency Bar - Prominent mobile visibility */}
       <div className="w-full bg-red-600 text-white shadow-xl border-b-4 border-yellow-400">
-        <div className="w-full px-2 py-4">
+        <div className="w-full px-2 py-1">
           <div className="flex items-center justify-center">
-            <div className="bg-yellow-400 text-red-900 px-8 py-4 rounded-2xl font-black text-xl whitespace-nowrap text-center border-4 border-yellow-300 shadow-2xl transform hover:scale-105 transition-transform">
+            <div className="bg-yellow-400 text-red-900 px-3 py-1 rounded-lg font-bold text-xs whitespace-nowrap text-center border border-yellow-300 shadow transform hover:scale-105 transition-transform">
               <div className="flex items-center justify-center">
-                <span className="text-3xl animate-bounce mr-3">🚨</span>
-                <span className="tracking-widest">ONLY 7 SLOTS LEFT!</span>
-                <span className="text-3xl animate-bounce ml-3">🚨</span>
+                <span className="text-base animate-bounce mr-1">🚨</span>
+                <span className="tracking-wide">ONLY 7 SLOTS LEFT!</span>
+                <span className="text-base animate-bounce ml-1">🚨</span>
               </div>
             </div>
           </div>
