@@ -89,18 +89,20 @@ export default function HeroSection() {
         />
       </Head>
       
-      {/* Pixel 8 optimized spacing to prevent header overlap */}
-      <div className="hidden md:block h-24"></div>
+      {/* Mobile Spacer */}
+      <div className="h-16 md:h-24"></div>
       
-      {/* Urgency Bar - Below header - Enhanced for mobile */}
-      <div className="w-full bg-gradient-to-r from-red-600 via-red-700 to-red-800 text-white shadow-lg">
-        <div className="w-full flex justify-center items-center p-2 sm:py-2 sm:px-4">
-          <div className="bg-yellow-400 text-red-900 px-5 sm:px-6 py-2.5 sm:py-2 rounded-full font-extrabold text-base sm:text-lg whitespace-nowrap text-center border-2 border-yellow-300 shadow-md">
-            <span className="inline-flex items-center">
-              <span className="text-xl animate-pulse">🚨</span>
-              <span className="mx-2 tracking-wide">ONLY 7 SLOTS LEFT!</span>
-              <span className="text-xl animate-pulse">🚨</span>
-            </span>
+      {/* Urgency Bar - Fixed at top for visibility */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-red-600 text-white shadow-lg">
+        <div className="w-full max-w-7xl mx-auto px-4">
+          <div className="flex items-center justify-center py-3">
+            <div className="bg-yellow-400 text-red-900 px-6 py-3 rounded-full font-black text-lg whitespace-nowrap text-center border-4 border-yellow-300 shadow-lg">
+              <span className="inline-flex items-center">
+                <span className="text-2xl animate-pulse">🚨</span>
+                <span className="mx-3 tracking-wider">ONLY 7 SLOTS LEFT!</span>
+                <span className="text-2xl animate-pulse">🚨</span>
+              </span>
+            </div>
           </div>
         </div>
       </div>
