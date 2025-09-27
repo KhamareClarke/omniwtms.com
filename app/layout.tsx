@@ -1,5 +1,6 @@
 import "./globals.css";
 import type { Metadata } from "next";
+import Script from "next/script";
 import LiveChatWidget from "@/components/LiveChatWidget";
 import { generateMetadata, siteConfig } from "@/lib/seo";
 
@@ -16,6 +17,19 @@ export default function RootLayout({
   return (
     <html lang="en-GB">
       <head>
+        {/* Google Analytics */}
+        <Script
+          strategy="afterInteractive"
+          src="https://www.googletagmanager.com/gtag/js?id=G-R6MQ2XYE9Z"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-R6MQ2XYE9Z');
+          `}
+        </Script>
         <link rel="canonical" href="https://omniwtms.com" />
         
         {/* Favicon */}
