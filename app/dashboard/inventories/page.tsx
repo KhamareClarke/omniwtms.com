@@ -140,7 +140,7 @@ const CONDITIONS = ["New", "Like New", "Used", "Refurbished", "For Parts"];
 
 interface Product {
 
-  id: number;
+  id: string | number;
 
   client_id: string;
 
@@ -706,8 +706,16 @@ export default function InventoriesPage() {
 
 
 
-  // Replace old SKU and barcode generators with new ones
+  // Generate UUID v4
+  const generateUUID = () => {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c == 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  };
 
+  // Replace old SKU and barcode generators with new ones
   const generateSKU = () => {
     const timestamp = Date.now().toString();
     const random = Math.floor(Math.random() * 1000000)
@@ -790,7 +798,7 @@ export default function InventoriesPage() {
 
         ...productData,
 
-        id: Date.now(),
+        id: generateUUID(),
 
         client_id: clientId,
 
@@ -900,28 +908,23 @@ export default function InventoriesPage() {
       }
       
       const clientId = currentUser?.id || "";
-      const baseTime = Date.now();
-      const productsToAdd: Product[] = validProducts.map((row: any, index: number) => {
-        // Generate unique ID with microsecond precision
-        const uniqueId = baseTime + index + (performance.now() * 1000);
-        return {
-          name: String(row.name || row.productname || row.product_name || row.description || row.item || `Product ${index + 1}`),
-          price: 0, // Set to 0 to avoid database errors
-          quantity: 1, // Set to 1 to avoid database errors
-          category: String(row.category || row.cat || row.type || "Other"),
-          condition: String(row.condition || row.status || row.state || "New"),
-          height: null,
-          weight: null,
-          length: null,
-          width: null,
-          client_id: clientId,
-          sku: generateSKU(),
-          barcode: generateBarcode(),
-          status: "pending",
-          id: Math.floor(uniqueId),
-          dimensions: null,
-        };
-      });
+      const productsToAdd: Product[] = validProducts.map((row: any, index: number) => ({
+        name: String(row.name || row.productname || row.product_name || row.description || row.item || `Product ${index + 1}`),
+        price: 0, // Set to 0 to avoid database errors
+        quantity: 1, // Set to 1 to avoid database errors
+        category: String(row.category || row.cat || row.type || "Other"),
+        condition: String(row.condition || row.status || row.state || "New"),
+        height: null,
+        weight: null,
+        length: null,
+        width: null,
+        client_id: clientId,
+        sku: generateSKU(),
+        barcode: generateBarcode(),
+        status: "pending",
+        id: generateUUID(),
+        dimensions: null,
+      }));
       
       const { error } = await supabase
         .from("products")
@@ -1167,7 +1170,7 @@ export default function InventoriesPage() {
 
 
 
-  const handleDeleteProduct = async (productId: number) => {
+  const handleDeleteProduct = async (productId: string | number) => {
 
     if (!confirm("Are you sure you want to delete this product?")) {
 
@@ -1212,20 +1215,29 @@ export default function InventoriesPage() {
     try {
       const selectedProductIds = selectedProducts.map(p => p.id);
       
-      const { error } = await supabase
+      // Delete all selected products at once
+      const { data, error } = await supabase
         .from("products")
         .delete()
-        .in("id", selectedProductIds);
+        .in("id", selectedProductIds)
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Delete error:", error);
+        throw error;
+      }
 
+      console.log("Deleted products:", data);
+
+      // Update UI to remove deleted products
       setProducts((prev) => prev.filter((p) => !selectedProductIds.includes(p.id)));
       setSelectedProducts([]);
       setShowBulkDeleteDialog(false);
+      
       toast.success(`${selectedProductIds.length} products deleted successfully`);
     } catch (error) {
-      console.error("Error deleting products:", error);
-      toast.error("Failed to delete products");
+      console.error("Delete failed:", error);
+      toast.error("Failed to delete products: " + (error as Error).message);
     }
   };
 
