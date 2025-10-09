@@ -709,31 +709,21 @@ export default function InventoriesPage() {
   // Replace old SKU and barcode generators with new ones
 
   const generateSKU = () => {
-
     const timestamp = Date.now().toString();
-
-    const random = Math.floor(Math.random() * 10000)
-
+    const random = Math.floor(Math.random() * 1000000)
       .toString()
-
-      .padStart(4, "0");
-
-    return `SKU${timestamp.slice(-8)}${random}`;
-
+      .padStart(6, "0");
+    const microtime = performance.now().toString().replace('.', '');
+    return `SKU${timestamp.slice(-8)}${random}${microtime.slice(-4)}`;
   };
 
   const generateBarcode = () => {
-
     const timestamp = Date.now().toString();
-
-    const random = Math.floor(Math.random() * 10000)
-
+    const random = Math.floor(Math.random() * 1000000)
       .toString()
-
-      .padStart(4, "0");
-
-    return `BC${timestamp.slice(-8)}${random}`;
-
+      .padStart(6, "0");
+    const microtime = performance.now().toString().replace('.', '');
+    return `BC${timestamp.slice(-8)}${random}${microtime.slice(-4)}`;
   };
 
 
@@ -910,23 +900,28 @@ export default function InventoriesPage() {
       }
       
       const clientId = currentUser?.id || "";
-      const productsToAdd: Product[] = validProducts.map((row: any, index: number) => ({
-        name: String(row.name || row.productname || row.product_name || row.description || row.item || `Product ${index + 1}`),
-        price: 0, // Set to 0 to avoid database errors
-        quantity: 1, // Set to 1 to avoid database errors
-        category: String(row.category || row.cat || row.type || "Other"),
-        condition: String(row.condition || row.status || row.state || "New"),
-        height: null,
-        weight: null,
-        length: null,
-        width: null,
-        client_id: clientId,
-        sku: generateSKU(),
-        barcode: generateBarcode(),
-        status: "pending",
-        id: Date.now() + Math.floor(Math.random() * 10000) + index,
-        dimensions: null,
-      }));
+      const baseTime = Date.now();
+      const productsToAdd: Product[] = validProducts.map((row: any, index: number) => {
+        // Generate unique ID with microsecond precision
+        const uniqueId = baseTime + index + (performance.now() * 1000);
+        return {
+          name: String(row.name || row.productname || row.product_name || row.description || row.item || `Product ${index + 1}`),
+          price: 0, // Set to 0 to avoid database errors
+          quantity: 1, // Set to 1 to avoid database errors
+          category: String(row.category || row.cat || row.type || "Other"),
+          condition: String(row.condition || row.status || row.state || "New"),
+          height: null,
+          weight: null,
+          length: null,
+          width: null,
+          client_id: clientId,
+          sku: generateSKU(),
+          barcode: generateBarcode(),
+          status: "pending",
+          id: Math.floor(uniqueId),
+          dimensions: null,
+        };
+      });
       
       const { error } = await supabase
         .from("products")
