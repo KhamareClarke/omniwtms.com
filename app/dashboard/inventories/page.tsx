@@ -354,6 +354,8 @@ export default function InventoriesPage() {
 
   const [itemToDelete, setItemToDelete] = useState<any | null>(null);
 
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+
   const [truckArrivals, setTruckArrivals] = useState<any[]>([]);
 
   const [truckItems, setTruckItems] = useState<any[]>([]);
@@ -1208,6 +1210,28 @@ export default function InventoriesPage() {
 
     }
 
+  };
+
+  // Bulk delete function
+  const handleBulkDeleteProducts = async () => {
+    try {
+      const selectedProductIds = selectedProducts.map(p => p.id);
+      
+      const { error } = await supabase
+        .from("products")
+        .delete()
+        .in("id", selectedProductIds);
+
+      if (error) throw error;
+
+      setProducts((prev) => prev.filter((p) => !selectedProductIds.includes(p.id)));
+      setSelectedProducts([]);
+      setShowBulkDeleteDialog(false);
+      toast.success(`${selectedProductIds.length} products deleted successfully`);
+    } catch (error) {
+      console.error("Error deleting products:", error);
+      toast.error("Failed to delete products");
+    }
   };
 
 
@@ -2215,6 +2239,62 @@ export default function InventoriesPage() {
 
             </Button>
 
+            <Button
+
+              variant="outline"
+
+              size="sm"
+
+              onClick={() => {
+
+                const selectedProducts = products.filter((p) => p.selected);
+
+                if (selectedProducts.length > 0) {
+
+                  setSelectedProducts(selectedProducts);
+
+                  setShowBulkDeleteDialog(true);
+
+                }
+
+              }}
+
+              disabled={!products.some((p) => p.selected)}
+
+              className={`
+
+                border-2 font-sans transition-all
+
+                ${
+
+                  products.some((p) => p.selected)
+
+                    ? "border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
+
+                    : "border-gray-300 text-gray-400 cursor-not-allowed"
+
+                }
+
+              `}
+
+            >
+
+              <Trash2 className="h-4 w-4 mr-2" />
+
+              Delete Selected
+
+              {products.some((p) => p.selected) && (
+
+                <span className="ml-2 bg-red-500 text-white px-2 py-0.5 rounded-full text-xs">
+
+                  {products.filter((p) => p.selected).length}
+
+                </span>
+
+              )}
+
+            </Button>
+
 
 
             <Dialog
@@ -2539,9 +2619,33 @@ export default function InventoriesPage() {
 
                         onClick={() => setEditingProduct(product)}
 
+                        className="text-blue-600 hover:text-blue-800"
+
                       >
 
                         <Edit className="h-4 w-4" />
+
+                      </Button>
+
+                      <Button
+
+                        variant="ghost"
+
+                        size="sm"
+
+                        onClick={() => {
+
+                          setItemToDelete(product);
+
+                          setShowDeleteDialog(true);
+
+                        }}
+
+                        className="text-red-600 hover:text-red-800"
+
+                      >
+
+                        <Trash2 className="h-4 w-4" />
 
                       </Button>
 
@@ -2971,7 +3075,50 @@ export default function InventoriesPage() {
 
       </Dialog>
 
-
+      {/* Bulk Delete Confirmation Dialog */}
+      <Dialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
+        <DialogContent className="sm:max-w-[425px] glass-card">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-heading font-bold text-gray-900">
+              Confirm Bulk Deletion
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-gray-700 font-sans">
+              Are you sure you want to delete {selectedProducts.length} selected products? 
+              This action cannot be undone.
+            </p>
+            <div className="mt-3">
+              <p className="text-sm text-gray-600 font-sans">
+                Products to be deleted:
+              </p>
+              <ul className="mt-2 max-h-32 overflow-y-auto">
+                {selectedProducts.map((product) => (
+                  <li key={product.id} className="text-sm text-gray-700 font-sans">
+                    • {product.name}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 justify-end items-stretch sm:items-center">
+            <Button
+              variant="outline"
+              onClick={() => setShowBulkDeleteDialog(false)}
+              className="font-sans"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleBulkDeleteProducts}
+              className="font-sans"
+            >
+              Delete {selectedProducts.length} Products
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Success Dialog */}
 
