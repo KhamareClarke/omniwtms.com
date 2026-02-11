@@ -523,6 +523,11 @@ export default function CourierContent() {
   }, [deliveries]);
 
   const checkAuthAndFetchData = async () => {
+    const currentUser = localStorage.getItem("currentUser");
+    if (currentUser) {
+      router.push("/dashboard");
+      return;
+    }
     const currentCourier = localStorage.getItem("currentCourier");
     if (!currentCourier) {
       toast.error("Please sign in to view your deliveries");

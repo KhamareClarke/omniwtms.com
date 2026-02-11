@@ -48,12 +48,24 @@ import {
   Moon,
   CloudMoon,
   Cloud,
+  Building2,
+  Users,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { clearAllRoleStorage } from "@/lib/auth/role-guard";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
 
@@ -1248,6 +1260,12 @@ const fetchWarehouseOperations = async (supabase: any, clientId: string) => {
 export default function DashboardPage() {
   const router = useRouter();
   const [clientData, setClientData] = useState<any>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminOrgs, setAdminOrgs] = useState<any[]>([]);
+  const [adminCouriers, setAdminCouriers] = useState<any[]>([]);
+  const [adminCustomers, setAdminCustomers] = useState<any[]>([]);
+  const [adminLoading, setAdminLoading] = useState(false);
+  const [adminTab, setAdminTab] = useState<"organizations" | "couriers" | "customers">("organizations");
   const [loading, setLoading] = useState(true);
   const [recentActivities, setRecentActivities] = useState<WarehouseActivity[]>(
     []
@@ -1335,7 +1353,7 @@ export default function DashboardPage() {
     }
   };
 
-  // Enhanced client authentication check
+  // Enhanced client/admin authentication check
   useEffect(() => {
     const checkAuth = async () => {
       const currentUser = localStorage.getItem("currentUser");
@@ -1348,6 +1366,26 @@ export default function DashboardPage() {
         const userData = JSON.parse(currentUser);
         if (!userData.id) {
           router.push("/auth/login");
+          return;
+        }
+
+        if (userData.type === "admin") {
+          const { data: adminCheck, error } = await supabase
+            .from("admins")
+            .select("id, email, name, status")
+            .eq("id", userData.id)
+            .single();
+
+          if (error || !adminCheck || adminCheck.status !== "active") {
+            console.error("Admin verification failed:", error);
+            localStorage.removeItem("currentUser");
+            router.push("/auth/login");
+            return;
+          }
+          setClientData(userData);
+          setIsAdmin(true);
+          fetchAdminDashboard();
+          setLoading(false);
           return;
         }
 
@@ -1391,15 +1429,50 @@ export default function DashboardPage() {
     checkAuth();
   }, [router, supabase]);
 
-  // Update the useEffect to call inspectDatabase
+  const fetchAdminDashboard = async () => {
+    setAdminLoading(true);
+    try {
+      const [clientsRes, couriersRes, customersRes] = await Promise.all([
+        supabase.from("clients").select("id, email, company, status, created_at").order("created_at", { ascending: false }),
+        supabase.from("couriers").select("id, email, name, status, created_at").order("created_at", { ascending: false }),
+        supabase.from("customers").select("id, email, name, status, created_at").order("created_at", { ascending: false }),
+      ]);
+      setAdminOrgs(clientsRes.data || []);
+      setAdminCouriers(couriersRes.data || []);
+      setAdminCustomers(customersRes.data || []);
+    } catch (e) {
+      console.error("Admin dashboard fetch error:", e);
+      toast.error("Failed to load admin data");
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
+  const updateAdminStatus = async (
+    table: "clients" | "couriers" | "customers",
+    id: string,
+    status: "active" | "inactive"
+  ) => {
+    try {
+      const { error } = await supabase.from(table).update({ status }).eq("id", id);
+      if (error) throw error;
+      toast.success(status === "inactive" ? "Suspended" : "Reactivated");
+      fetchAdminDashboard();
+    } catch (e: any) {
+      console.error("Update status error:", e);
+      toast.error(e?.message || "Failed to update");
+    }
+  };
+
+  // Update the useEffect to call inspectDatabase (client only)
   useEffect(() => {
-    if (clientData?.id) {
+    if (clientData?.id && !isAdmin) {
       console.log("🔑 Client ID:", clientData.id);
       inspectDatabase(supabase).then(() => {
         fetchDashboardData();
       });
     }
-  }, [clientData?.id]);
+  }, [clientData?.id, isAdmin]);
 
   // Update fetchRecentMovements to fetch all movements for the client (no date filter)
   const fetchRecentMovements = async (clientId: string) => {
@@ -2102,9 +2175,9 @@ export default function DashboardPage() {
     }));
   };
 
-  // Setup real-time subscriptions with enhanced error handling
+  // Setup real-time subscriptions with enhanced error handling (client only, not admin)
   useEffect(() => {
-    if (!clientData?.id) return;
+    if (!clientData?.id || isAdmin) return;
 
     let retryCount = 0;
     const maxRetries = 3;
@@ -2271,6 +2344,286 @@ export default function DashboardPage() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
           <p>Loading your dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Admin dashboard: all organizations, couriers, customers
+  if (isAdmin) {
+    return (
+      <div className="min-h-screen w-full bg-gray-50/30 pb-12">
+        <header className="w-full bg-white border-b border-gray-200 mb-4 px-4 sm:px-6 py-4">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+            <div>
+              <h1 className="text-xl md:text-2xl font-bold text-slate-800 flex items-center gap-2">
+                <Building2 className="h-6 w-6 text-slate-600" />
+                Admin Dashboard
+              </h1>
+              <p className="text-sm text-gray-600 mt-0.5">All organizations, couriers & customers</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => fetchAdminDashboard()}
+                disabled={adminLoading}
+                variant="outline"
+                size="sm"
+              >
+                {adminLoading ? "Refreshing..." : "Refresh"}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  clearAllRoleStorage();
+                  router.push("/auth/login");
+                }}
+              >
+                Log out
+              </Button>
+            </div>
+          </div>
+        </header>
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          {adminLoading && adminOrgs.length === 0 && adminCouriers.length === 0 && adminCustomers.length === 0 ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-700"></div>
+            </div>
+          ) : (
+            <Tabs value={adminTab} onValueChange={(v) => setAdminTab(v as "organizations" | "couriers" | "customers")} className="w-full">
+              <TabsList className="grid w-full grid-cols-3 mb-4">
+                <TabsTrigger value="organizations" className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4" />
+                  Organizations
+                  <Badge variant="secondary" className="ml-1">{adminOrgs.length}</Badge>
+                </TabsTrigger>
+                <TabsTrigger value="couriers" className="flex items-center gap-2">
+                  <Truck className="h-4 w-4" />
+                  Couriers
+                  <Badge variant="secondary" className="ml-1">{adminCouriers.length}</Badge>
+                </TabsTrigger>
+                <TabsTrigger value="customers" className="flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Customers
+                  <Badge variant="secondary" className="ml-1">{adminCustomers.length}</Badge>
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="organizations" className="mt-0">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Building2 className="h-5 w-5" /> All Organizations
+                  </CardTitle>
+                  <CardDescription>Registered client organizations</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="rounded-md border overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Company</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Registered</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {adminOrgs.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center text-gray-500 py-8">
+                              No organizations yet
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          adminOrgs.map((org: any) => (
+                            <TableRow key={org.id}>
+                              <TableCell className="font-medium">{org.company || "—"}</TableCell>
+                              <TableCell>{org.email}</TableCell>
+                              <TableCell>
+                                <Badge variant={org.status === "active" ? "default" : "secondary"}>
+                                  {org.status || "—"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-gray-500 text-sm">
+                                {org.created_at ? new Date(org.created_at).toLocaleDateString() : "—"}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {org.status === "active" ? (
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    className="h-7 text-xs"
+                                    onClick={() => updateAdminStatus("clients", org.id, "inactive")}
+                                  >
+                                    Suspend
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 text-xs"
+                                    onClick={() => updateAdminStatus("clients", org.id, "active")}
+                                  >
+                                    Reactivate
+                                  </Button>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+              </TabsContent>
+
+              <TabsContent value="couriers" className="mt-0">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Truck className="h-5 w-5" /> Registered Couriers
+                  </CardTitle>
+                  <CardDescription>All courier accounts</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="rounded-md border overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Registered</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {adminCouriers.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center text-gray-500 py-8">
+                              No couriers yet
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          adminCouriers.map((c: any) => (
+                            <TableRow key={c.id}>
+                              <TableCell className="font-medium">{c.name || "—"}</TableCell>
+                              <TableCell>{c.email}</TableCell>
+                              <TableCell>
+                                <Badge variant={c.status === "active" ? "default" : "secondary"}>
+                                  {c.status || "—"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-gray-500 text-sm">
+                                {c.created_at ? new Date(c.created_at).toLocaleDateString() : "—"}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {c.status === "active" ? (
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    className="h-7 text-xs"
+                                    onClick={() => updateAdminStatus("couriers", c.id, "inactive")}
+                                  >
+                                    Suspend
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 text-xs"
+                                    onClick={() => updateAdminStatus("couriers", c.id, "active")}
+                                  >
+                                    Reactivate
+                                  </Button>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+              </TabsContent>
+
+              <TabsContent value="customers" className="mt-0">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5" /> Customers
+                  </CardTitle>
+                  <CardDescription>All customer accounts</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="rounded-md border overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Registered</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {adminCustomers.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center text-gray-500 py-8">
+                              No customers yet
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          adminCustomers.map((cust: any) => (
+                            <TableRow key={cust.id}>
+                              <TableCell className="font-medium">{cust.name || "—"}</TableCell>
+                              <TableCell>{cust.email}</TableCell>
+                              <TableCell>
+                                <Badge variant={(cust.status || "active") === "active" ? "default" : "secondary"}>
+                                  {cust.status || "active"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-gray-500 text-sm">
+                                {cust.created_at ? new Date(cust.created_at).toLocaleDateString() : "—"}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {(cust.status || "active") === "active" ? (
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    className="h-7 text-xs"
+                                    onClick={() => updateAdminStatus("customers", cust.id, "inactive")}
+                                  >
+                                    Suspend
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 text-xs"
+                                    onClick={() => updateAdminStatus("customers", cust.id, "active")}
+                                  >
+                                    Reactivate
+                                  </Button>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+              </TabsContent>
+            </Tabs>
+          )}
         </div>
       </div>
     );

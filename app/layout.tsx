@@ -2,6 +2,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 import Script from "next/script";
 import LiveChatWidget from "@/components/LiveChatWidget";
+import { Toaster } from "sonner";
 import { generateMetadata, siteConfig } from "@/lib/seo";
 
 export const metadata: Metadata = generateMetadata({
@@ -202,6 +203,7 @@ export default function RootLayout({
         <div id="app">
           {children}
           <LiveChatWidget />
+          <Toaster position="top-right" richColors closeButton />
         </div>
       </body>
     </html>

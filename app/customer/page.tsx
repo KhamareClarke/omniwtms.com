@@ -198,7 +198,11 @@ export default function CustomerDashboard() {
   const [labelPdfCount, setLabelPdfCount] = useState(0);
 
   useEffect(() => {
-    // Get customer from localStorage
+    const currentUser = localStorage.getItem("currentUser");
+    if (currentUser) {
+      router.push("/dashboard");
+      return;
+    }
     const customerStr = localStorage.getItem("currentCustomer");
     if (!customerStr) {
       router.push("/auth/login");

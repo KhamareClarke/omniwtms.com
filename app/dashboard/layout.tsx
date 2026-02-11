@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Sidebar } from "@/components/sidebar";
 import { AIChatWidget } from "@/components/ui/ai-chat-widget";
+import { getCurrentRole, getRedirectForWrongRole, clearAllRoleStorage } from "@/lib/auth/role-guard";
 import React from "react";
 
 export default function DashboardLayout({
@@ -20,21 +21,32 @@ export default function DashboardLayout({
   const router = useRouter();
   const [username, setUsername] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     checkAuth();
   }, []);
 
   const checkAuth = () => {
+    const role = getCurrentRole();
+    const redirect = getRedirectForWrongRole("/dashboard");
+    if (redirect) {
+      toast.info("Redirecting to your portal");
+      router.push(redirect);
+      setIsLoading(false);
+      return;
+    }
     const user = localStorage.getItem("currentUser");
     if (!user) {
       toast.error("Please sign in to access the dashboard");
       router.push("/auth/login");
+      setIsLoading(false);
       return;
     }
 
     try {
       const userData = JSON.parse(user);
+      setIsAdmin(userData.type === "admin");
       if (!userData.email) {
         toast.error("Invalid user data. Please sign in again");
         handleLogout();
@@ -51,7 +63,7 @@ export default function DashboardLayout({
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("currentUser");
+    clearAllRoleStorage();
     router.push("/auth/login");
   };
 
@@ -63,16 +75,16 @@ export default function DashboardLayout({
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="flex flex-col md:flex-row h-screen">
-        {/* Sidebar */}
-        <Sidebar className="h-screen" />
+        {/* No sidebar for admin */}
+        {!isAdmin && <Sidebar className="h-screen" />}
 
         {/* Main Content */}
-        <div className="flex-1 p-4 md:p-8 md:ml-0 overflow-y-auto">
+        <div className={`flex-1 overflow-y-auto ${isAdmin ? "p-4 md:p-6" : "p-4 md:p-8 md:ml-0"}`}>
           {children}
         </div>
 
-        {/* AI Chat Widget */}
-        <AIChatWidget />
+        {/* No AI Chat Widget for admin */}
+        {!isAdmin && <AIChatWidget />}
       </div>
     </div>
   );

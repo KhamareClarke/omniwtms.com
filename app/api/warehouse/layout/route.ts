@@ -85,6 +85,54 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// PATCH - Update layout grid metadata only (no image required)
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { warehouse_id, grid_rows, grid_columns } = body;
+
+    if (!warehouse_id) {
+      return NextResponse.json(
+        { error: "warehouse_id is required" },
+        { status: 400 }
+      );
+    }
+
+    const { data: existingLayout } = await supabase
+      .from("warehouse_layouts")
+      .select("id")
+      .eq("warehouse_id", warehouse_id)
+      .limit(1)
+      .single();
+
+    if (!existingLayout) {
+      return NextResponse.json(
+        { error: "Layout not found. Create a layout with an image first." },
+        { status: 404 }
+      );
+    }
+
+    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    if (grid_rows != null) updates.grid_rows = grid_rows;
+    if (grid_columns != null) updates.grid_columns = grid_columns;
+
+    const { data: layout, error } = await supabase
+      .from("warehouse_layouts")
+      .update(updates)
+      .eq("id", existingLayout.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return NextResponse.json({ layout });
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error.message || "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
 // POST - Create or update layout
 export async function POST(request: NextRequest) {
   try {
@@ -115,8 +163,8 @@ export async function POST(request: NextRequest) {
           image_url,
           image_width,
           image_height,
-          grid_rows: grid_rows || 10,
-          grid_columns: grid_columns || 10,
+          grid_rows: grid_rows ?? 10,
+          grid_columns: grid_columns ?? 10,
           updated_at: new Date().toISOString(),
         })
         .eq("id", existingLayout.id)
@@ -134,8 +182,8 @@ export async function POST(request: NextRequest) {
           image_url,
           image_width,
           image_height,
-          grid_rows: grid_rows || 10,
-          grid_columns: grid_columns || 10,
+          grid_rows: grid_rows ?? 10,
+          grid_columns: grid_columns ?? 10,
         })
         .select()
         .single();

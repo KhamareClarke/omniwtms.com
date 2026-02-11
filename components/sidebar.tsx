@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { clearAllRoleStorage } from "@/lib/auth/role-guard";
 
 interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {}
 
@@ -88,12 +89,9 @@ export function Sidebar({ className }: SidebarProps) {
   const [isMobile, setIsMobile] = useState(false);
 
   const handleLogout = () => {
-    // Clear all relevant storage
-    localStorage.removeItem("currentUser");
+    clearAllRoleStorage();
     localStorage.removeItem("customLogo");
     sessionStorage.clear();
-
-    // Redirect to login page
     router.push("/auth/login");
   };
 

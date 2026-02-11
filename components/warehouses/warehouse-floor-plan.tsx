@@ -13,6 +13,15 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -126,6 +135,12 @@ export function WarehouseFloorPlan({ warehouseId }: WarehouseFloorPlanProps) {
   const [fullscreenStageSize, setFullscreenStageSize] = useState({ width: 1200, height: 800 });
   const [shouldCenterFullscreen, setShouldCenterFullscreen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [feedbackModal, setFeedbackModal] = useState<{
+    type: "success" | "error";
+    title: string;
+    message: string;
+    open: boolean;
+  }>({ type: "success", title: "", message: "", open: false });
   const [lastPointerPosition, setLastPointerPosition] = useState({ x: 0, y: 0 });
   const [dragStartPos, setDragStartPos] = useState<{ x: number; y: number } | null>(null);
   const stageRef = useRef<any>(null);
@@ -435,8 +450,16 @@ export function WarehouseFloorPlan({ warehouseId }: WarehouseFloorPlanProps) {
       await loadLayout();
       
       toast.success(`Layout created successfully with ${rowsToSave}x${colsToSave} grid!`);
+      setFeedbackModal({
+        type: "success",
+        title: "Layout saved",
+        message: `Grid saved as ${rowsToSave}×${colsToSave}. Changes persist across sessions.`,
+        open: true,
+      });
     } catch (error: any) {
-      toast.error(error.message || "Failed to save layout");
+      const msg = error.message || "Failed to save layout";
+      toast.error(msg);
+      setFeedbackModal({ type: "error", title: "Save layout failed", message: msg, open: true });
     }
   };
 
@@ -491,8 +514,16 @@ export function WarehouseFloorPlan({ warehouseId }: WarehouseFloorPlanProps) {
       await loadLayout();
       setShowConfigDialog(false);
       toast.success("Section saved successfully");
+      setFeedbackModal({
+        type: "success",
+        title: "Section saved",
+        message: `${configForm.section_name} updated. Changes persist across sessions.`,
+        open: true,
+      });
     } catch (error: any) {
-      toast.error(error.message || "Failed to save section");
+      const msg = error.message || "Failed to save section";
+      toast.error(msg);
+      setFeedbackModal({ type: "error", title: "Save section failed", message: msg, open: true });
     }
   };
 
@@ -700,10 +731,17 @@ export function WarehouseFloorPlan({ warehouseId }: WarehouseFloorPlanProps) {
         // Close dialog and show success message
         setShowMoveStockDialog(false);
         toast.success(`${movedCount} product(s) moved successfully!`, { duration: 5000 });
+        setFeedbackModal({
+          type: "success",
+          title: "Move complete",
+          message: `${movedCount} product(s) moved. Inventory updated.`,
+          open: true,
+        });
       } catch (error: any) {
         console.error("Error moving products:", error);
         const errorMessage = error?.message || error?.error?.message || "Failed to move products";
         toast.error(`Error: ${errorMessage}`, { duration: 5000 });
+        setFeedbackModal({ type: "error", title: "Move stock failed", message: errorMessage, open: true });
         // Don't close dialog on error so user can retry
       } finally {
         setIsMovingStock(false);
@@ -747,10 +785,17 @@ export function WarehouseFloorPlan({ warehouseId }: WarehouseFloorPlanProps) {
       setMoveStockForm({ product_id: "", section_id: "", quantity: 1, notes: "" });
       setShowMoveStockDialog(false);
       toast.success("Stock moved successfully!", { duration: 5000 });
+      setFeedbackModal({
+        type: "success",
+        title: "Move complete",
+        message: "Stock moved. Inventory updated.",
+        open: true,
+      });
     } catch (error: any) {
       console.error("Error moving stock:", error);
       const errorMessage = error?.message || error?.error?.message || "Failed to move stock";
       toast.error(`Error: ${errorMessage}`, { duration: 5000 });
+      setFeedbackModal({ type: "error", title: "Move stock failed", message: errorMessage, open: true });
       // Don't close dialog on error so user can retry
     } finally {
       setIsMovingStock(false);
@@ -860,10 +905,17 @@ export function WarehouseFloorPlan({ warehouseId }: WarehouseFloorPlanProps) {
       });
       setShowTransferDialog(false);
       toast.success("Stock transferred successfully!", { duration: 5000 });
+      setFeedbackModal({
+        type: "success",
+        title: "Transfer complete",
+        message: "Stock transferred between sections. Inventory updated.",
+        open: true,
+      });
     } catch (error: any) {
       console.error("Error transferring stock:", error);
       const errorMessage = error?.message || error?.error?.message || "Failed to transfer stock";
       toast.error(`Error: ${errorMessage}`, { duration: 5000 });
+      setFeedbackModal({ type: "error", title: "Transfer failed", message: errorMessage, open: true });
       // Don't close dialog on error so user can retry
     } finally {
       setIsTransferringStock(false);
@@ -978,8 +1030,16 @@ export function WarehouseFloorPlan({ warehouseId }: WarehouseFloorPlanProps) {
 
       await loadLayout();
       toast.success(`Moved ${draggedProduct.productName} to ${targetSection.section_name}`);
+      setFeedbackModal({
+        type: "success",
+        title: "Move complete",
+        message: `${draggedProduct.productName} moved to ${targetSection.section_name}.`,
+        open: true,
+      });
     } catch (error: any) {
-      toast.error(error.message || "Failed to move product");
+      const msg = error.message || "Failed to move product";
+      toast.error(msg);
+      setFeedbackModal({ type: "error", title: "Move failed", message: msg, open: true });
     } finally {
       setDraggedProduct(null);
     }
@@ -1418,15 +1478,15 @@ export function WarehouseFloorPlan({ warehouseId }: WarehouseFloorPlanProps) {
                               const newCols = parseInt(colsInput) || gridColumns;
                               
                               if (newRows !== gridRows || newCols !== gridColumns) {
-                                // Pass new values directly to saveLayout to avoid async state issues
+                                // Pass new values directly to saveLayout to avoid async state issues (persists to API)
                                 await saveLayout(
-                                  layout.image_url, 
-                                  layout.image_width || 800, 
+                                  layout.image_url,
+                                  layout.image_width || 800,
                                   layout.image_height || 600,
                                   newRows,
                                   newCols
                                 );
-                                toast.success(`Grid settings updated to ${newRows}x${newCols}`);
+                                // Success toast and modal are shown inside saveLayout
                               } else {
                                 toast.info("Grid settings unchanged");
                               }
@@ -2963,6 +3023,38 @@ export function WarehouseFloorPlan({ warehouseId }: WarehouseFloorPlanProps) {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Error / success feedback modal */}
+      <AlertDialog
+        open={feedbackModal.open}
+        onOpenChange={(open) => setFeedbackModal((prev) => ({ ...prev, open }))}
+      >
+        <AlertDialogContent className="relative">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute right-3 top-3 h-8 w-8 rounded-full"
+            aria-label="Close"
+            onClick={() => setFeedbackModal((prev) => ({ ...prev, open: false }))}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {feedbackModal.title || (feedbackModal.type === "error" ? "Action failed" : "Success")}
+            </AlertDialogTitle>
+            <AlertDialogDescription>{feedbackModal.message}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-row justify-end gap-2 sm:gap-2">
+            <AlertDialogAction
+              onClick={() => setFeedbackModal((prev) => ({ ...prev, open: false }))}
+              className="min-w-[80px]"
+            >
+              Close
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
