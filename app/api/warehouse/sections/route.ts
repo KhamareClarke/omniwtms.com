@@ -52,7 +52,8 @@ export async function GET(request: NextRequest) {
 
       if (!productsError && products) {
         productsMap = products.reduce((acc: any, p: any) => {
-          acc[p.id] = p;
+          const key = p?.id != null ? String(p.id) : "";
+          if (key) acc[key] = p;
           return acc;
         }, {});
       }
@@ -60,7 +61,10 @@ export async function GET(request: NextRequest) {
 
     // Calculate usage for each section and attach inventory with products
     const sectionsWithUsage = (sections || []).map((section: any) => {
-      const sectionInventory = (allInventory || []).filter((inv: any) => inv.section_id === section.id);
+      const sectionId = section?.id != null ? String(section.id) : "";
+      const sectionInventory = (allInventory || []).filter(
+        (inv: any) => inv.section_id != null && String(inv.section_id) === sectionId
+      );
       const totalQuantity = sectionInventory.reduce(
         (sum: number, inv: any) => sum + (inv.quantity || 0),
         0
@@ -73,7 +77,7 @@ export async function GET(request: NextRequest) {
       // Attach products to inventory
       const inventoryWithProducts = sectionInventory.map((inv: any) => ({
         ...inv,
-        products: productsMap[inv.product_id] || null,
+        products: inv.product_id != null ? (productsMap[String(inv.product_id)] ?? null) : null,
       }));
 
       return {
@@ -106,7 +110,8 @@ export async function POST(request: NextRequest) {
       section_type, 
       capacity, 
       is_blocked,
-      color 
+      color,
+      notes 
     } = body;
 
     if (!layout_id || row_index === undefined || column_index === undefined) {
@@ -128,16 +133,18 @@ export async function POST(request: NextRequest) {
     let section;
     if (existingSection) {
       // Update existing section
+      const updates: Record<string, unknown> = {
+        section_name: section_name || `Section ${row_index}-${column_index}`,
+        section_type: section_type || "storage",
+        capacity: capacity || 0,
+        is_blocked: is_blocked || false,
+        color,
+        updated_at: new Date().toISOString(),
+      };
+      if (notes !== undefined) updates.notes = notes;
       const { data, error } = await supabase
         .from("warehouse_sections")
-        .update({
-          section_name: section_name || `Section ${row_index}-${column_index}`,
-          section_type: section_type || "storage",
-          capacity: capacity || 0,
-          is_blocked: is_blocked || false,
-          color,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updates)
         .eq("id", existingSection.id)
         .select()
         .single();
@@ -154,9 +161,10 @@ export async function POST(request: NextRequest) {
           column_index,
           section_name: section_name || `Section ${row_index}-${column_index}`,
           section_type: section_type || "storage",
-          capacity: capacity || 0,
+          capacity: capacity ?? 0,
           is_blocked: is_blocked || false,
           color,
+          ...(notes !== undefined && { notes }),
         })
         .select()
         .single();

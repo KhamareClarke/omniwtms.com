@@ -59,6 +59,7 @@ interface WarehouseSection {
   usage_percentage: number;
   is_blocked: boolean;
   color?: string;
+  notes?: string;
   section_inventory?: SectionInventory[];
 }
 
@@ -93,6 +94,7 @@ export function WarehouseFloorPlan({ warehouseId }: WarehouseFloorPlanProps) {
     section_type: "storage",
     capacity: 0,
     is_blocked: false,
+    notes: "",
   });
   const [moveStockForm, setMoveStockForm] = useState({
     product_id: "",
@@ -476,6 +478,7 @@ export function WarehouseFloorPlan({ warehouseId }: WarehouseFloorPlanProps) {
         section_type: section.section_type,
         capacity: section.capacity,
         is_blocked: section.is_blocked,
+        notes: section.notes ?? "",
       });
     } else {
       setSelectedSection(null);
@@ -484,10 +487,14 @@ export function WarehouseFloorPlan({ warehouseId }: WarehouseFloorPlanProps) {
         section_type: "storage",
         capacity: 0,
         is_blocked: false,
+        notes: "",
       });
     }
     setShowConfigDialog(true);
   };
+
+  const cellIdA1 = (row: number, col: number) =>
+    `${String.fromCharCode(65 + col)}${row + 1}`;
 
   const saveSection = async () => {
     if (!layout || !selectedCell) return;
@@ -504,6 +511,7 @@ export function WarehouseFloorPlan({ warehouseId }: WarehouseFloorPlanProps) {
           section_type: configForm.section_type,
           capacity: configForm.capacity,
           is_blocked: configForm.is_blocked,
+          notes: configForm.notes || null,
         }),
       });
 
@@ -1390,16 +1398,40 @@ export function WarehouseFloorPlan({ warehouseId }: WarehouseFloorPlanProps) {
                       .map((section) => (
                         <div
                           key={section.id}
-                          className="p-2 border rounded cursor-pointer hover:bg-blue-50 flex-shrink-0 min-w-[120px]"
-                          onClick={() => {
-                            setSelectedSection(section);
-                            setSelectedCell({ row: section.row_index, col: section.column_index });
-                          }}
+                          className="p-2 border rounded hover:bg-blue-50 flex-shrink-0 min-w-[120px] flex flex-col gap-1"
                         >
-                          <p className="font-semibold text-xs">{section.section_name}</p>
-                          <p className="text-xs text-gray-500">{section.current_usage}/{section.capacity}</p>
-                          {section.section_inventory && section.section_inventory.length > 0 && (
-                            <p className="text-xs text-blue-600 mt-1">{section.section_inventory.length} items</p>
+                          <div
+                            className="cursor-pointer"
+                            onClick={() => {
+                              setSelectedSection(section);
+                              setSelectedCell({ row: section.row_index, col: section.column_index });
+                            }}
+                          >
+                            <p className="font-semibold text-xs">{section.section_name}</p>
+                            <p className="text-xs text-gray-500">{section.current_usage}/{section.capacity}</p>
+                            {section.section_inventory && section.section_inventory.length > 0 && (
+                              <p className="text-xs text-blue-600 mt-1">{section.section_inventory.length} items</p>
+                            )}
+                          </div>
+                          {(section.section_inventory?.length ?? 0) > 0 && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-6 text-[10px] px-2 w-full"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setTransferForm({
+                                  from_section_id: section.id || "",
+                                  to_section_id: "",
+                                  product_id: "",
+                                  quantity: 1,
+                                  notes: "",
+                                });
+                                setShowTransferDialog(true);
+                              }}
+                            >
+                              Move
+                            </Button>
                           )}
                         </div>
                       ))}
@@ -2082,15 +2114,20 @@ export function WarehouseFloorPlan({ warehouseId }: WarehouseFloorPlanProps) {
       )}
 
       {/* Dialogs - Always rendered (outside conditional) */}
-      {/* Section Configuration Dialog */}
+      {/* Section Configuration Dialog - Cell ID (row/col + A1), metadata, edit only for admin */}
       <Dialog open={showConfigDialog} onOpenChange={setShowConfigDialog}>
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Configure Section</DialogTitle>
           </DialogHeader>
+          {selectedCell && (
+            <p className="text-sm text-gray-600 border-b pb-2">
+              Cell: R{selectedCell.row}-C{selectedCell.col} (A1: {cellIdA1(selectedCell.row, selectedCell.col)})
+            </p>
+          )}
           <div className="space-y-4 py-4">
             <div>
-              <Label htmlFor="section-name">Section Name</Label>
+              <Label htmlFor="section-name">Slot name</Label>
               <Input
                 id="section-name"
                 value={configForm.section_name}
@@ -2101,7 +2138,7 @@ export function WarehouseFloorPlan({ warehouseId }: WarehouseFloorPlanProps) {
               />
             </div>
             <div>
-              <Label htmlFor="section-type">Section Type</Label>
+              <Label htmlFor="section-type">Zone / Section</Label>
               <Select
                 value={configForm.section_type}
                 onValueChange={(value) =>
@@ -2122,7 +2159,18 @@ export function WarehouseFloorPlan({ warehouseId }: WarehouseFloorPlanProps) {
               </Select>
             </div>
             <div>
-              <Label htmlFor="capacity">Capacity</Label>
+              <Label htmlFor="section-notes">Notes</Label>
+              <Input
+                id="section-notes"
+                value={configForm.notes}
+                onChange={(e) =>
+                  setConfigForm({ ...configForm, notes: e.target.value })
+                }
+                placeholder="Optional notes"
+              />
+            </div>
+            <div>
+              <Label htmlFor="capacity">Capacity (optional)</Label>
               <Input
                 id="capacity"
                 type="number"
@@ -2511,38 +2559,47 @@ export function WarehouseFloorPlan({ warehouseId }: WarehouseFloorPlanProps) {
               </div>
             </div>
             {transferForm.from_section_id && (() => {
-              const sourceSection = sections.find(s => s.id === transferForm.from_section_id);
+              const fromId = String(transferForm.from_section_id);
+              const sourceSection = sections.find(s => String(s?.id) === fromId);
+              const inventory = sourceSection?.section_inventory ?? [];
+              const hasProducts = inventory.length > 0;
               return (
                 <>
                   <div>
                     <Label>Product</Label>
                     <Select
-                      value={transferForm.product_id}
+                      value={transferForm.product_id || undefined}
                       onValueChange={(value) =>
                         setTransferForm({ ...transferForm, product_id: value, quantity: 1 })
                       }
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select product" />
+                        <SelectValue placeholder={hasProducts ? "Select product" : "No products in source section"} />
                       </SelectTrigger>
-                      <SelectContent>
-                        {sourceSection?.section_inventory && sourceSection.section_inventory.length > 0 ? (
-                          sourceSection.section_inventory.map((inv) => (
-                            <SelectItem key={inv.id} value={inv.product_id}>
-                              {inv.products?.name || "Unknown"} - Available: {inv.quantity}
-                            </SelectItem>
-                          ))
+                      <SelectContent className="z-[10000]">
+                        {hasProducts ? (
+                          inventory.map((inv) => {
+                            const pid = inv.product_id ? String(inv.product_id) : "";
+                            if (!pid) return null;
+                            const name = inv.products?.name || inv.products?.sku || "Product";
+                            return (
+                              <SelectItem key={inv.id || pid} value={pid}>
+                                {name} - Available: {inv.quantity ?? 0}
+                              </SelectItem>
+                            );
+                          })
                         ) : (
-                          <SelectItem value="none" disabled>
-                            No products in source section
+                          <SelectItem value="__none__" disabled>
+                            No products in source section. Add stock to this section first.
                           </SelectItem>
                         )}
                       </SelectContent>
                     </Select>
                   </div>
                   {transferForm.product_id && (() => {
+                    const pid = String(transferForm.product_id);
                     const sourceInv = sourceSection?.section_inventory?.find(
-                      inv => inv.product_id === transferForm.product_id
+                      inv => inv.product_id && String(inv.product_id) === pid
                     );
                     return (
                       <div>

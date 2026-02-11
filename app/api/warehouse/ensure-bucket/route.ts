@@ -7,10 +7,12 @@ export async function POST() {
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!supabaseUrl || !supabaseServiceKey) {
-      return NextResponse.json(
-        { error: 'Supabase credentials not configured' },
-        { status: 500 }
-      );
+      // Return 200 so the app doesn't block; floor plan layout/sections can still save without storage
+      return NextResponse.json({
+        success: false,
+        message: 'Storage bucket setup skipped. Add SUPABASE_SERVICE_ROLE_KEY to .env to enable image uploads.',
+        error: 'Supabase credentials not configured',
+      });
     }
 
     // Create admin client with service role key
@@ -28,10 +30,11 @@ export async function POST() {
     
     if (listError) {
       console.error('Error listing buckets:', listError);
-      return NextResponse.json(
-        { error: 'Failed to check buckets', details: listError.message },
-        { status: 500 }
-      );
+      return NextResponse.json({
+        success: false,
+        message: 'Could not check storage buckets. Image upload may not work.',
+        error: listError.message,
+      });
     }
 
     const bucketExists = buckets?.some(bucket => bucket.name === bucketName);
@@ -53,10 +56,11 @@ export async function POST() {
 
     if (createError) {
       console.error('Error creating bucket:', createError);
-      return NextResponse.json(
-        { error: 'Failed to create bucket', details: createError.message },
-        { status: 500 }
-      );
+      return NextResponse.json({
+        success: false,
+        message: 'Could not create storage bucket. Create "warehouse-assets" in Supabase Dashboard > Storage if needed.',
+        error: createError.message,
+      });
     }
 
     return NextResponse.json({
@@ -66,10 +70,11 @@ export async function POST() {
     });
   } catch (error: any) {
     console.error('Error in ensure-bucket route:', error);
-    return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      success: false,
+      message: 'Storage check failed. Layout and sections can still be saved.',
+      error: error?.message || 'Internal server error',
+    });
   }
 }
 
