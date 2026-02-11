@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://qpkaklmbiwitlroykjim.supabase.co';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-
-const supabase = createClient(supabaseUrl, supabaseKey);
+import { createClient } from "@/lib/supabase/server";
 
 // GET - Get layout for a warehouse
 export async function GET(request: NextRequest) {
   try {
+    const supabase = createClient();
     const { searchParams } = new URL(request.url);
     const warehouseId = searchParams.get("warehouse_id");
 
@@ -88,6 +84,7 @@ export async function GET(request: NextRequest) {
 // PATCH - Update layout grid metadata only (no image required)
 export async function PATCH(request: NextRequest) {
   try {
+    const supabase = createClient();
     const body = await request.json();
     const { warehouse_id, grid_rows, grid_columns } = body;
 
@@ -136,6 +133,7 @@ export async function PATCH(request: NextRequest) {
 // POST - Create or update layout
 export async function POST(request: NextRequest) {
   try {
+    const supabase = createClient();
     const body = await request.json();
     const { warehouse_id, image_url, image_width, image_height, grid_rows, grid_columns } = body;
 

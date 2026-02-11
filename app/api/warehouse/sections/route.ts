@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://qpkaklmbiwitlroykjim.supabase.co';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-
-const supabase = createClient(supabaseUrl, supabaseKey);
+import { createClient } from "@/lib/supabase/server";
 
 // GET - Get all sections for a layout
 export async function GET(request: NextRequest) {
   try {
+    const supabase = createClient();
     const { searchParams } = new URL(request.url);
     const layoutId = searchParams.get("layout_id");
 
@@ -100,6 +96,7 @@ export async function GET(request: NextRequest) {
 // POST - Create or update a section
 export async function POST(request: NextRequest) {
   try {
+    const supabase = createClient();
     const body = await request.json();
     const { 
       layout_id, 
@@ -180,6 +177,7 @@ export async function POST(request: NextRequest) {
 // DELETE - Delete a section
 export async function DELETE(request: NextRequest) {
   try {
+    const supabase = createClient();
     const { searchParams } = new URL(request.url);
     const sectionId = searchParams.get("section_id");
 

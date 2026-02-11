@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://qpkaklmbiwitlroykjim.supabase.co';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-
-const supabase = createClient(supabaseUrl, supabaseKey);
+import { createClient } from "@/lib/supabase/server";
 
 // POST - Move stock to a section
 export async function POST(request: NextRequest) {
   try {
+    const supabase = createClient();
     const body = await request.json();
     const { section_id, product_id, quantity, notes } = body;
 
@@ -99,6 +95,7 @@ export async function POST(request: NextRequest) {
 // GET - Get inventory for a section
 export async function GET(request: NextRequest) {
   try {
+    const supabase = createClient();
     const { searchParams } = new URL(request.url);
     const sectionId = searchParams.get("section_id");
 
