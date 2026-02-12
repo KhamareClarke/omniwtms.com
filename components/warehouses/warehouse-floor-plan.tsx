@@ -831,74 +831,21 @@ export function WarehouseFloorPlan({ warehouseId }: WarehouseFloorPlanProps) {
     try {
       console.log("Starting transfer operation");
       toast.info("Transferring stock...", { duration: 2000 });
-      
-      // Get current inventory in source section
-      const { data: sourceInventory, error: sourceError } = await supabase
-        .from("section_inventory")
-        .select("id, quantity")
-        .eq("section_id", transferForm.from_section_id)
-        .eq("product_id", transferForm.product_id)
-        .maybeSingle();
 
-      if (sourceError || !sourceInventory) {
-        throw new Error("Product not found in source section");
-      }
+      const res = await fetch("/api/warehouse/section-inventory/transfer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from_section_id: transferForm.from_section_id,
+          to_section_id: transferForm.to_section_id,
+          product_id: transferForm.product_id,
+          quantity: transferForm.quantity,
+          notes: transferForm.notes,
+        }),
+      });
 
-      if (sourceInventory.quantity < transferForm.quantity) {
-        throw new Error("Insufficient quantity in source section");
-      }
-
-      // Update source section inventory
-      const newSourceQuantity = sourceInventory.quantity - transferForm.quantity;
-      if (newSourceQuantity > 0) {
-        const { error: updateSourceError } = await supabase
-          .from("section_inventory")
-          .update({ quantity: newSourceQuantity })
-          .eq("id", sourceInventory.id);
-        if (updateSourceError) throw updateSourceError;
-      } else {
-        // Delete if quantity becomes 0
-        const { error: deleteError } = await supabase
-          .from("section_inventory")
-          .delete()
-          .eq("id", sourceInventory.id);
-        if (deleteError) throw deleteError;
-      }
-
-      // Update or create destination section inventory
-      const { data: destInventory, error: destCheckError } = await supabase
-        .from("section_inventory")
-        .select("id, quantity")
-        .eq("section_id", transferForm.to_section_id)
-        .eq("product_id", transferForm.product_id)
-        .maybeSingle();
-
-      if (destCheckError && destCheckError.code !== "PGRST116") {
-        throw destCheckError;
-      }
-
-      if (destInventory) {
-        // Update existing inventory
-        const { error: updateDestError } = await supabase
-          .from("section_inventory")
-          .update({
-            quantity: destInventory.quantity + transferForm.quantity,
-            notes: transferForm.notes || `Transferred from section ${transferForm.from_section_id}`,
-          })
-          .eq("id", destInventory.id);
-        if (updateDestError) throw updateDestError;
-      } else {
-        // Create new inventory entry
-        const { error: insertError } = await supabase
-          .from("section_inventory")
-          .insert({
-            section_id: transferForm.to_section_id,
-            product_id: transferForm.product_id,
-            quantity: transferForm.quantity,
-            notes: transferForm.notes || `Transferred from section ${transferForm.from_section_id}`,
-          });
-        if (insertError) throw insertError;
-      }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || data.details || "Transfer failed");
 
       console.log("Transfer operation completed successfully");
       await loadLayout();

@@ -19,6 +19,9 @@ In the [Supabase Dashboard](https://supabase.com/dashboard) → your **productio
 3. **`supabase/migrations/20250612000002_ensure_warehouse_inventory_and_movements.sql`**  
    Creates `warehouse_inventory` and `inventory_movements`. Fixes 404 on those tables.
 
+4. **`supabase/migrations/20250614000000_3d_spatial_allocation_engine.sql`**  
+   Creates `warehouse_bins` and `bin_allocations` for 3D spatial allocation. Required for Warehouse Visualization → 3D Bins.
+
 Alternatively, if you use the Supabase CLI and link to the production project:
 
 ```bash
@@ -45,6 +48,7 @@ If you still see **401** on `couriers` or `deliveries`, those tables may have RL
 
 | Issue | Fix |
 |-------|-----|
-| 404 on warehouses, products, warehouse_inventory, inventory_movements | Run the three migrations above on the **production** Supabase project. |
+| 404 on warehouses, products, warehouse_inventory, inventory_movements | Run migrations 1–3 above on the **production** Supabase project. |
+| 3D Bins / warehouse_bins not found | Run migration 4 (`20250614000000_3d_spatial_allocation_engine.sql`) on production. |
 | 400 on products | Run `20250612000001_ensure_products_table.sql` so the `products` table has the columns the app selects. |
 | 401 on API requests | Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` for production; fix RLS on couriers/deliveries if needed. |

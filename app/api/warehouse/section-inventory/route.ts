@@ -15,6 +15,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get section capacity and enforce over-allocation prevention
+    const { data: section, error: sectionErr } = await supabase
+      .from("warehouse_sections")
+      .select("id, capacity")
+      .eq("id", section_id)
+      .single();
+
+    if (sectionErr || !section) {
+      return NextResponse.json({ error: "Section not found" }, { status: 404 });
+    }
+
+    const capacity = section.capacity ?? 0;
+    const { data: currentInventory } = await supabase
+      .from("section_inventory")
+      .select("quantity")
+      .eq("section_id", section_id);
+
+    const currentTotal = currentInventory?.reduce((sum, inv) => sum + (inv.quantity || 0), 0) ?? 0;
+    if (capacity > 0 && currentTotal + quantity > capacity) {
+      return NextResponse.json(
+        {
+          error: "Over-allocation prevented",
+          details: `Section capacity is ${capacity}. Current: ${currentTotal}. Cannot add ${quantity}.`,
+        },
+        { status: 400 }
+      );
+    }
+
     // Check if inventory already exists for this section and product
     const { data: existingInventory } = await supabase
       .from("section_inventory")

@@ -3,21 +3,32 @@
 
 import React, { useState, useEffect } from "react";
 import { WarehouseFloorPlan } from "@/components/warehouses/warehouse-floor-plan";
+import { WarehouseBinsContent } from "@/components/warehouses/warehouse-bins-content";
+import { CreateWarehouseAndFirstBin } from "@/components/warehouses/create-warehouse-and-first-bin";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AnimatedGradientBackground } from "@/components/ui/animated-gradient-background";
 import { AIParticleEffect } from "@/components/ui/ai-particle-effect";
 import { supabase } from "@/lib/auth/SupabaseClient";
 import { toast } from "sonner";
-import { Upload, Plus } from "lucide-react";
+import { Upload, Plus, LayoutGrid, Box } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useRouter } from "next/navigation";
 
 export default function WarehouseVisualizationPage() {
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [selectedWarehouseId, setSelectedWarehouseId] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<string>("3d-bins");
+  const [showCreateWarehouse, setShowCreateWarehouse] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -81,7 +92,7 @@ export default function WarehouseVisualizationPage() {
         <Card className="flex-1 flex flex-col min-h-0 overflow-visible">
           <CardHeader className="flex-shrink-0 pb-2">
             <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center justify-between">
-              <CardTitle className="text-lg">Warehouse Floor Plan</CardTitle>
+              <CardTitle className="text-lg">Warehouse Visualization</CardTitle>
               <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                 <div className="w-full sm:w-64">
                   <Label className="text-xs">Select Warehouse</Label>
@@ -107,10 +118,10 @@ export default function WarehouseVisualizationPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                {warehouses.length === 0 && (
+                {!selectedWarehouseId && (
                   <Button
-                    onClick={() => router.push("/dashboard/warehouses")}
-                    className="w-full sm:w-auto bg-gradient-to-r from-[#3456FF] to-[#8763FF] hover:opacity-90 h-8"
+                    onClick={() => setShowCreateWarehouse(true)}
+                    className="w-full sm:w-auto bg-gradient-to-r from-[#3456FF] to-[#8763FF] hover:opacity-90 h-8 shrink-0"
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     Create Warehouse
@@ -119,10 +130,43 @@ export default function WarehouseVisualizationPage() {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="p-2 flex-1 min-h-0">
+          <CardContent className="p-2 flex-1 min-h-0 overflow-y-auto">
             {selectedWarehouseId ? (
-              <div className="w-full">
-                <WarehouseFloorPlan warehouseId={selectedWarehouseId} />
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+                <TabsList className="grid w-full max-w-xs grid-cols-2 mb-2 flex-shrink-0">
+                  <TabsTrigger value="floor-plan" className="flex items-center gap-1.5">
+                    <LayoutGrid className="w-4 h-4" />
+                    Floor Plan
+                  </TabsTrigger>
+                  <TabsTrigger value="3d-bins" className="flex items-center gap-1.5">
+                    <Box className="w-4 h-4" />
+                    3D Bins
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent value="floor-plan" className="mt-0 flex-1 min-h-0 data-[state=inactive]:hidden">
+                  <div className="w-full h-full">
+                    <WarehouseFloorPlan warehouseId={selectedWarehouseId} />
+                  </div>
+                </TabsContent>
+                <TabsContent value="3d-bins" className="mt-0 flex-1 min-h-0 data-[state=inactive]:hidden">
+                  <div className="w-full h-full">
+                    <WarehouseBinsContent warehouseId={selectedWarehouseId} />
+                  </div>
+                </TabsContent>
+              </Tabs>
+            ) : warehouses.length === 0 ? (
+              <div className="space-y-4">
+                <div className="rounded-lg bg-[#3456FF]/10 border border-[#3456FF]/30 p-4 text-center">
+                  <p className="text-lg font-semibold text-[#3456FF]">No warehouses yet</p>
+                  <p className="text-sm text-gray-600 mt-1">Create your first warehouse and 3D bin below</p>
+                </div>
+                <CreateWarehouseAndFirstBin
+                  onSuccess={async (newId) => {
+                    await loadWarehouses();
+                    setSelectedWarehouseId(newId);
+                    setActiveTab("3d-bins");
+                  }}
+                />
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center h-[600px] border-2 border-dashed border-gray-300 rounded-lg p-8">
@@ -156,6 +200,22 @@ export default function WarehouseVisualizationPage() {
             )}
           </CardContent>
         </Card>
+
+        <Dialog open={showCreateWarehouse} onOpenChange={setShowCreateWarehouse}>
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Create New Warehouse</DialogTitle>
+            </DialogHeader>
+            <CreateWarehouseAndFirstBin
+              onSuccess={async (newId) => {
+                await loadWarehouses();
+                setSelectedWarehouseId(newId);
+                setActiveTab("3d-bins");
+                setShowCreateWarehouse(false);
+              }}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
     </AnimatedGradientBackground>
   );
