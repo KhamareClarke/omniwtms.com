@@ -85,31 +85,23 @@ export async function POST(request: NextRequest) {
     }
 
     // Update section current_usage
-    const { data: section } = await supabase
+    const { data: allInventory } = await supabase
+      .from("section_inventory")
+      .select("quantity")
+      .eq("section_id", section_id);
+
+    const totalQuantity = allInventory?.reduce(
+      (sum, inv) => sum + (inv.quantity || 0),
+      0
+    ) || 0;
+
+    await supabase
       .from("warehouse_sections")
-      .select("id")
-      .eq("id", section_id)
-      .single();
-
-    if (section) {
-      const { data: allInventory } = await supabase
-        .from("section_inventory")
-        .select("quantity")
-        .eq("section_id", section_id);
-
-      const totalQuantity = allInventory?.reduce(
-        (sum, inv) => sum + (inv.quantity || 0),
-        0
-      ) || 0;
-
-      await supabase
-        .from("warehouse_sections")
-        .update({
-          current_usage: totalQuantity,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", section_id);
-    }
+      .update({
+        current_usage: totalQuantity,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", section_id);
 
     return NextResponse.json({ inventory });
   } catch (error: any) {
