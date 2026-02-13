@@ -143,6 +143,7 @@ export function WarehouseFloorPlan({ warehouseId }: WarehouseFloorPlanProps) {
     message: string;
     open: boolean;
   }>({ type: "success", title: "", message: "", open: false });
+  const [isSavingSection, setIsSavingSection] = useState(false);
   const [lastPointerPosition, setLastPointerPosition] = useState({ x: 0, y: 0 });
   const [dragStartPos, setDragStartPos] = useState<{ x: number; y: number } | null>(null);
   const stageRef = useRef<any>(null);
@@ -497,8 +498,9 @@ export function WarehouseFloorPlan({ warehouseId }: WarehouseFloorPlanProps) {
     `${String.fromCharCode(65 + col)}${row + 1}`;
 
   const saveSection = async () => {
-    if (!layout || !selectedCell) return;
+    if (!layout || !selectedCell || isSavingSection) return;
 
+    setIsSavingSection(true);
     try {
       const response = await fetch("/api/warehouse/sections", {
         method: "POST",
@@ -521,6 +523,8 @@ export function WarehouseFloorPlan({ warehouseId }: WarehouseFloorPlanProps) {
       // Reload sections
       await loadLayout();
       setShowConfigDialog(false);
+      setSelectedCell(null);
+      setSelectedSection(null);
       toast.success("Section saved successfully");
       setFeedbackModal({
         type: "success",
@@ -532,6 +536,8 @@ export function WarehouseFloorPlan({ warehouseId }: WarehouseFloorPlanProps) {
       const msg = error.message || "Failed to save section";
       toast.error(msg);
       setFeedbackModal({ type: "error", title: "Save section failed", message: msg, open: true });
+    } finally {
+      setIsSavingSection(false);
     }
   };
 
@@ -2069,7 +2075,7 @@ export function WarehouseFloorPlan({ warehouseId }: WarehouseFloorPlanProps) {
           </DialogHeader>
           {selectedCell && (
             <p className="text-sm text-gray-600 border-b pb-2">
-              Cell: R{selectedCell.row}-C{selectedCell.col} (A1: {cellIdA1(selectedCell.row, selectedCell.col)})
+              Cell: R{selectedCell.row}-C{selectedCell.col} ({cellIdA1(selectedCell.row, selectedCell.col)})
             </p>
           )}
           <div className="space-y-4 py-4">
@@ -2153,15 +2159,18 @@ export function WarehouseFloorPlan({ warehouseId }: WarehouseFloorPlanProps) {
               onClick={() => {
                 setShowConfigDialog(false);
                 setSelectedCell(null);
+                setSelectedSection(null);
               }}
+              disabled={isSavingSection}
             >
               Cancel
             </Button>
             <Button 
               onClick={saveSection}
               className="bg-gradient-to-r from-[#3456FF] to-[#8763FF] hover:opacity-90"
+              disabled={isSavingSection}
             >
-              Save Section
+              {isSavingSection ? "Saving..." : "Save Section"}
             </Button>
           </DialogFooter>
         </DialogContent>
