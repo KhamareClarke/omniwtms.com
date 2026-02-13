@@ -2,6 +2,8 @@
 
 Omni WTMS includes a coordinate-based storage system for bin-level allocation with capacity and volume constraints.
 
+> **Full schema reference:** See [GRID_SCHEMA.md](./GRID_SCHEMA.md) for consolidated documentation of all grid, zone, and slot coordinate tables.
+
 ## Schema
 
 ### `warehouse_bins`

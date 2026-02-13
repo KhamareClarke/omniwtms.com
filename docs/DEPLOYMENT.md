@@ -22,6 +22,9 @@ In the [Supabase Dashboard](https://supabase.com/dashboard) → your **productio
 4. **`supabase/migrations/20250614000000_3d_spatial_allocation_engine.sql`**  
    Creates `warehouse_bins` and `bin_allocations` for 3D spatial allocation. Required for Warehouse Visualization → 3D Bins.
 
+5. **`supabase/migrations/20250615000000_zone_section_mapping.sql`**  
+   Adds `zone_id` to `warehouse_sections` to link grid cells to `warehouse_zones`. Required for zone-to-section mapping.
+
 Alternatively, if you use the Supabase CLI and link to the production project:
 
 ```bash
@@ -50,5 +53,6 @@ If you still see **401** on `couriers` or `deliveries`, those tables may have RL
 |-------|-----|
 | 404 on warehouses, products, warehouse_inventory, inventory_movements | Run migrations 1–3 above on the **production** Supabase project. |
 | 3D Bins / warehouse_bins not found | Run migration 4 (`20250614000000_3d_spatial_allocation_engine.sql`) on production. |
+| Zone-to-section mapping | Run migration 5 (`20250615000000_zone_section_mapping.sql`) to add `zone_id` to `warehouse_sections`. |
 | 400 on products | Run `20250612000001_ensure_products_table.sql` so the `products` table has the columns the app selects. |
 | 401 on API requests | Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` for production; fix RLS on couriers/deliveries if needed. |
