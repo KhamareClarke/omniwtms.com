@@ -244,6 +244,25 @@ export default function LoginPage() {
     setClientError(""); // Clear previous error
 
     try {
+      // Block courier-only users from signing in as organization (role separation)
+      const { data: courierOnly } = await supabase
+        .from("couriers")
+        .select("id")
+        .eq("email", clientFormData.email)
+        .single();
+
+      const { data: orgUser } = await supabase
+        .from("clients")
+        .select("id")
+        .eq("email", clientFormData.email)
+        .single();
+
+      if (courierOnly && !orgUser) {
+        setClientError("This email is registered as a courier. Please use the Courier tab to sign in.");
+        setIsLoading(false);
+        return;
+      }
+
       const { data: client, error } = await supabase
         .from("clients")
         .select("id, email, company, status")
@@ -289,6 +308,19 @@ export default function LoginPage() {
     setCourierError(""); // Clear previous error
 
     try {
+      // Block organization users from signing in as courier (role separation)
+      const { data: orgUser } = await supabase
+        .from("clients")
+        .select("id")
+        .eq("email", courierFormData.email)
+        .single();
+
+      if (orgUser) {
+        setCourierError("This email is registered as an organization. Please use the Organization tab to sign in.");
+        setIsLoading(false);
+        return;
+      }
+
       const { data: courier, error } = await supabase
         .from("couriers")
         .select("*")
