@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect } from "react";
 import { WarehouseFloorPlan } from "@/components/warehouses/warehouse-floor-plan";
+import { WarehouseGrid } from "@/components/WarehouseGrid";
 import { WarehouseBinsContent } from "@/components/warehouses/warehouse-bins-content";
 import { CreateWarehouseAndFirstBin } from "@/components/warehouses/create-warehouse-and-first-bin";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -13,7 +14,7 @@ import { AnimatedGradientBackground } from "@/components/ui/animated-gradient-ba
 import { AIParticleEffect } from "@/components/ui/ai-particle-effect";
 import { supabase } from "@/lib/auth/SupabaseClient";
 import { toast } from "sonner";
-import { Upload, Plus, LayoutGrid, Box } from "lucide-react";
+import { Upload, Plus, LayoutGrid, Box, Grid3X3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -133,10 +134,14 @@ export default function WarehouseVisualizationPage() {
           <CardContent className="p-2 flex-1 min-h-0 overflow-y-auto">
             {selectedWarehouseId ? (
               <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-                <TabsList className="grid w-full max-w-xs grid-cols-2 mb-2 flex-shrink-0">
+                <TabsList className="grid w-full max-w-md grid-cols-3 mb-2 flex-shrink-0">
                   <TabsTrigger value="floor-plan" className="flex items-center gap-1.5">
                     <LayoutGrid className="w-4 h-4" />
                     Floor Plan
+                  </TabsTrigger>
+                  <TabsTrigger value="grid" className="flex items-center gap-1.5">
+                    <Grid3X3 className="w-4 h-4" />
+                    Grid
                   </TabsTrigger>
                   <TabsTrigger value="3d-bins" className="flex items-center gap-1.5">
                     <Box className="w-4 h-4" />
@@ -146,6 +151,11 @@ export default function WarehouseVisualizationPage() {
                 <TabsContent value="floor-plan" className="mt-0 flex-1 min-h-0 data-[state=inactive]:hidden">
                   <div className="w-full h-full">
                     <WarehouseFloorPlan warehouseId={selectedWarehouseId} />
+                  </div>
+                </TabsContent>
+                <TabsContent value="grid" className="mt-0 flex-1 min-h-0 data-[state=inactive]:hidden">
+                  <div className="w-full h-full">
+                    <WarehouseGrid warehouseId={selectedWarehouseId} />
                   </div>
                 </TabsContent>
                 <TabsContent value="3d-bins" className="mt-0 flex-1 min-h-0 data-[state=inactive]:hidden">
