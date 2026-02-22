@@ -133,6 +133,9 @@
   },
   "devDependencies": {
     "@types/formidable": "^3.4.5",
+    "@types/nodemailer": "^6.4.14",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "^14.2.23",
     "update-browserslist-db": "^1.1.3"
   }
 }
