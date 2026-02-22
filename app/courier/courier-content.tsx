@@ -1541,8 +1541,8 @@ export default function CourierContent() {
                     </div>
                   )}
 
-                  {/* POD Section */}
-                  {delivery.status === "in_progress" && (
+                  {/* POD Section - show when in progress or out for delivery */}
+                  {(delivery.status === "in_progress" || delivery.status === "out_for_delivery") && (
                     <div className="bg-muted/50 p-4 rounded-lg mt-4">
                       <h3 className="font-medium flex items-center gap-2 mb-3">
                         <Package className="h-4 w-4" />
@@ -1599,7 +1599,7 @@ export default function CourierContent() {
                   )}
 
                   {/* Completion Requirements Section */}
-                  {delivery.status === "in_progress" && (
+                  {(delivery.status === "in_progress" || delivery.status === "out_for_delivery") && (
                     <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                       <h3 className="font-medium flex items-center gap-2 mb-3 text-blue-800">
                         <CheckCircle className="h-4 w-4" />
@@ -1733,7 +1733,7 @@ export default function CourierContent() {
                   )}
 
                   {/* Action Buttons */}
-                  {(["pending", "in_progress"] as const).includes(
+                  {(["pending", "in_progress", "out_for_delivery"] as const).includes(
                     delivery.status
                   ) && (
                     <div className="flex flex-wrap gap-3 pt-2">
@@ -1750,7 +1750,7 @@ export default function CourierContent() {
                           Start delivery
                         </Button>
                       )}
-                      {delivery.status === "in_progress" && (
+                      {(delivery.status === "in_progress" || delivery.status === "out_for_delivery") && (
                         <>
                           {completeError && (
                             <div className="mb-2 p-2 bg-red-100 text-red-700 rounded text-center font-semibold">
