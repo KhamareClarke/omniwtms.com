@@ -13,8 +13,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import CustomerSidebar from "../CustomerSidebar";
+import { Badge } from "@/components/ui/badge";
 
 function SidebarLink({
   icon,
@@ -148,6 +149,7 @@ function SidebarLink({
 export default function OrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
   const [customer, setCustomer] = useState<any>(null);
+  const [ordersLoading, setOrdersLoading] = useState(true);
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [orderItems, setOrderItems] = useState([
     { description: "", quantity: 1 },
@@ -172,17 +174,24 @@ export default function OrdersPage() {
   }, [customer]);
 
   const fetchOrders = async (customerId: string) => {
-    const { data, error } = await supabase
-      .from("simple_orders")
-      .select("*")
-      .eq("customer_id", customerId)
-      .order("created_at", { ascending: false });
-
-    if (error) {
+    setOrdersLoading(true);
+    try {
+      const res = await fetch(
+        `/api/customer/orders?customer_id=${encodeURIComponent(customerId)}`
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error || "Failed to fetch orders");
+        setOrders([]);
+        return;
+      }
+      setOrders(data.orders ?? []);
+    } catch {
       toast.error("Failed to fetch orders");
-      return;
+      setOrders([]);
+    } finally {
+      setOrdersLoading(false);
     }
-    setOrders(data || []);
   };
 
   const handleAddOrderItem = () => {
@@ -217,16 +226,16 @@ export default function OrdersPage() {
         .from("simple_orders")
         .insert(itemsToInsert);
       if (error) throw error;
+      toast.success("Order created successfully!");
       setShowOrderModal(false);
       setOrderItems([{ description: "", quantity: 1 }]);
-      setOrderSuccessMsg("Order created successfully!");
-      setTimeout(() => setOrderSuccessMsg(""), 60000);
-      // Refresh orders
+      setOrderSuccessMsg("");
       fetchOrders(customer.id);
     } catch (err) {
       console.error("Error creating order:", err);
+      toast.error("Failed to create order");
       setOrderSuccessMsg("Failed to create order");
-      setTimeout(() => setOrderSuccessMsg(""), 60000);
+      setTimeout(() => setOrderSuccessMsg(""), 5000);
     } finally {
       setOrderLoading(false);
     }
@@ -245,17 +254,25 @@ export default function OrdersPage() {
       <CustomerSidebar />
       <main className="flex-1 bg-gray-50">
         <div className="max-w-4xl mx-auto px-4 py-8">
-          <div className="flex justify-between items-center mb-6">
+          <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
             <h1 className="text-2xl font-bold">Orders</h1>
-            <Dialog open={showOrderModal} onOpenChange={setShowOrderModal}>
-              <DialogTrigger asChild>
-                <Button
-                  className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto"
-                  onClick={() => setShowOrderModal(true)}
-                >
-                  Create Order
-                </Button>
-              </DialogTrigger>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => customer?.id && fetchOrders(customer.id)}
+                disabled={ordersLoading}
+              >
+                {ordersLoading ? "Loading…" : "Refresh"}
+              </Button>
+              <Dialog open={showOrderModal} onOpenChange={setShowOrderModal}>
+                <DialogTrigger asChild>
+                  <Button
+                    className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto"
+                    onClick={() => setShowOrderModal(true)}
+                  >
+                    Create Order
+                  </Button>
+                </DialogTrigger>
               <DialogContent className="max-w-lg w-full p-0">
                 <div className="flex flex-col h-full max-h-[90vh]">
                   <DialogHeader className="p-4 pb-0">
@@ -346,26 +363,32 @@ export default function OrdersPage() {
                   )}
                 </div>
               </DialogContent>
-            </Dialog>
+              </Dialog>
+            </div>
           </div>
+          <p className="text-sm text-gray-500 mb-6">
+            When the organization assigns a courier and products to you (Warehouse to Customer Address), that assignment appears here. You can also create your own orders. Status updates when the courier progresses or delivers.
+          </p>
           <div className="bg-white rounded-xl shadow p-6">
+            {ordersLoading ? (
+              <div className="py-12 text-center text-gray-500">
+                Loading orders…
+              </div>
+            ) : (
             <div className="overflow-x-auto w-full">
-              <table className="min-w-full text-xs">
+              <table className="min-w-full text-sm">
                 <thead>
                   <tr>
-                    <th className="px-2 py-1 border-b bg-gray-50 text-left">
-                      Order ID
+                    <th className="px-4 py-3 border-b bg-gray-50 text-left font-medium text-gray-700">
+                      Order #
                     </th>
-                    <th className="px-2 py-1 border-b bg-gray-50 text-left">
-                      Description
+                    <th className="px-4 py-3 border-b bg-gray-50 text-left font-medium text-gray-700">
+                      Items
                     </th>
-                    <th className="px-2 py-1 border-b bg-gray-50 text-left">
-                      Quantity
-                    </th>
-                    <th className="px-2 py-1 border-b bg-gray-50 text-left">
+                    <th className="px-4 py-3 border-b bg-gray-50 text-left font-medium text-gray-700">
                       Date
                     </th>
-                    <th className="px-2 py-1 border-b bg-gray-50 text-left">
+                    <th className="px-4 py-3 border-b bg-gray-50 text-left font-medium text-gray-700">
                       Status
                     </th>
                   </tr>
@@ -373,35 +396,55 @@ export default function OrdersPage() {
                 <tbody>
                   {orders.length === 0 ? (
                     <tr>
-                      <td
-                        colSpan={3}
-                        className="text-center py-8 text-gray-400"
-                      >
-                        No orders found.
+                      <td colSpan={4} className="text-center py-8 text-gray-500">
+                        No orders yet. Use <strong>Create Order</strong> above to add one, or wait for your organization to assign orders to you.
                       </td>
                     </tr>
                   ) : (
-                    orders.map((order) => (
-                      <tr key={order.id}>
-                        <td className="px-2 py-1 border-b">{order.id}</td>
-                        <td className="px-2 py-1 border-b">
-                          {order.description}
-                        </td>
-                        <td className="px-2 py-1 border-b">{order.quantity}</td>
-                        <td className="px-2 py-1 border-b">
-                          {new Date(order.created_at).toLocaleDateString()}
-                        </td>
-                        <td className="px-2 py-1 border-b">
-                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                            Active
-                          </span>
-                        </td>
-                      </tr>
-                    ))
+                    orders.map((order) => {
+                      const status = (order.status || "pending").toLowerCase();
+                      const statusClass =
+                        status === "delivered" || status === "completed"
+                          ? "bg-green-100 text-green-800 border-green-200"
+                          : status === "shipped" || status === "processing"
+                          ? "bg-blue-100 text-blue-800 border-blue-200"
+                          : status === "cancelled" || status === "failed"
+                          ? "bg-red-100 text-red-800 border-red-200"
+                          : status === "active"
+                          ? "bg-amber-100 text-amber-800 border-amber-200"
+                          : "bg-gray-100 text-gray-800 border-gray-200";
+                      const itemsSummary = (order.items || [])
+                        .map((i: any) => `${i.sku_name || i.sku_code || "Item"} × ${i.quantity}`)
+                        .join("; ") || "—";
+                      return (
+                        <tr key={order.id} className="border-b border-gray-100 hover:bg-gray-50/50">
+                          <td className="px-4 py-3 font-mono font-medium text-gray-900">
+                            {order.order_number || order.id?.slice(0, 8) || "—"}
+                          </td>
+                          <td className="px-4 py-3 text-gray-600 max-w-xs truncate" title={itemsSummary}>
+                            {itemsSummary}
+                          </td>
+                          <td className="px-4 py-3 text-gray-600">
+                            {order.created_at
+                              ? new Date(order.created_at).toLocaleString(undefined, {
+                                  dateStyle: "medium",
+                                  timeStyle: "short",
+                                })
+                              : "—"}
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge variant="outline" className={`capitalize ${statusClass}`}>
+                              {order.status || "Pending"}
+                            </Badge>
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
             </div>
+            )}
           </div>
         </div>
       </main>

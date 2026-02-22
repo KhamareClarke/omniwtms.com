@@ -769,20 +769,14 @@ export default function CourierContent() {
           return;
         }
 
-        // Check if all stops are completed
+        // Check stops: for address-only deliveries (no route) we only require POD
         const allStops = delivery.optimized_route?.stops || [];
+        const hasRouteStops = allStops.length > 0;
         const completedStops = allStops.filter(
           (stop) => stop.status === "completed"
         );
 
-        if (allStops.length === 0) {
-          setCompleteError(
-            "No stops found for this delivery. Cannot complete delivery."
-          );
-          return;
-        }
-
-        if (completedStops.length !== allStops.length) {
+        if (hasRouteStops && completedStops.length !== allStops.length) {
           const pendingStops = allStops.length - completedStops.length;
           setCompleteError(
             `Cannot complete delivery. ${pendingStops} stop(s) still pending. Please mark all stops as completed first.`
@@ -868,6 +862,17 @@ export default function CourierContent() {
       toast.success(
         `Delivery status updated to ${newStatus.replace("_", " ")}`
       );
+
+      // Notify: audit + timeline + admin only (no customer/org email when courier updates)
+      try {
+        await fetch("/api/notify-delivery-status", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ delivery_id: deliveryId, new_status: newStatus, triggered_by: "courier" }),
+        });
+      } catch (e) {
+        console.error("Notify delivery status failed:", e);
+      }
 
       // Refresh data completely
       setTimeout(checkAuthAndFetchData, 500);
@@ -966,6 +971,17 @@ export default function CourierContent() {
       }));
 
       toast.success("POD uploaded and delivery marked as completed");
+
+      // Notify: audit + timeline + admin only (no customer/org email when courier completes)
+      try {
+        await fetch("/api/notify-delivery-status", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ delivery_id: deliveryId, new_status: "completed", triggered_by: "courier" }),
+        });
+      } catch (e) {
+        console.error("Notify delivery status failed:", e);
+      }
 
       // Force complete data refresh
       setTimeout(checkAuthAndFetchData, 500);
@@ -1171,6 +1187,17 @@ export default function CourierContent() {
       setFailureDialogOpen(false);
       setSelectedDeliveryId(null);
       setFailureReason({ reason: "", details: "" });
+
+      // Notify: audit + timeline + admin only (no customer/org email when courier marks failed)
+      try {
+        await fetch("/api/notify-delivery-status", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ delivery_id: selectedDeliveryId, new_status: "failed", triggered_by: "courier" }),
+        });
+      } catch (e) {
+        console.error("Notify delivery status failed:", e);
+      }
     } catch (error) {
       console.error("Error marking delivery as failed:", error);
       toast.error("Failed to update delivery status");
@@ -1281,7 +1308,7 @@ export default function CourierContent() {
             }}
           >
             <AccordionItem value="item-1">
-              <AccordionTrigger>
+              <AccordionTrigger className="hover:no-underline">
                 <div className="flex justify-between items-center w-full pr-4">
                   <div className="flex items-center gap-4">
                     <Package className="h-5 w-5" />
@@ -1294,7 +1321,21 @@ export default function CourierContent() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex items-center gap-2">
+                    {delivery.status === "pending" && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="shrink-0 cursor-pointer select-none touch-manipulation bg-[#3456FF] hover:bg-[#3456FF]/90 text-white font-semibold shadow-md hover:shadow-lg min-h-[40px] px-4 relative z-10"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleStatusUpdate(delivery.id, "in_progress");
+                        }}
+                      >
+                        Start delivery
+                      </Button>
+                    )}
                     <Badge
                       variant={
                         delivery.priority === "high"
@@ -1625,10 +1666,11 @@ export default function CourierContent() {
                         <div className="mt-3 p-3 rounded-lg bg-white border">
                           <div className="flex items-center gap-2">
                             {(() => {
-                              const allStopsCompleted =
-                                delivery.optimized_route?.stops?.every(
-                                  (stop) => stop.status === "completed"
-                                ) || false;
+                              const routeStops = delivery.optimized_route?.stops || [];
+                              const hasRouteStops = routeStops.length > 0;
+                              const allStopsCompleted = !hasRouteStops || routeStops.every(
+                                (stop) => stop.status === "completed"
+                              );
                               const podUploaded = !!delivery.pod_file;
                               const canComplete =
                                 allStopsCompleted && podUploaded;
@@ -1651,7 +1693,7 @@ export default function CourierContent() {
                                     </div>
                                   )}
                                   <div className="text-xs text-gray-500 ml-auto">
-                                    {!allStopsCompleted && (
+                                    {hasRouteStops && !allStopsCompleted && (
                                       <div>• Mark all stops as completed</div>
                                     )}
                                     {!podUploaded && (
@@ -1667,28 +1709,45 @@ export default function CourierContent() {
                     </div>
                   )}
 
+                  {/* Address-only delivery: show full address when no route stops */}
+                  {(!delivery.optimized_route?.stops?.length) && (delivery.shipping_label?.delivery?.address || delivery.delivery_stops?.length) && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mt-4">
+                      <h3 className="font-medium flex items-center gap-2 mb-2 text-amber-800">
+                        <MapIcon className="h-4 w-4" />
+                        Delivery address (no route — use your own navigation)
+                      </h3>
+                      <p className="text-sm text-amber-900 font-medium">
+                        {delivery.shipping_label?.delivery?.address ||
+                          delivery.delivery_stops
+                            ?.filter((s) => s.stop_type === "delivery")
+                            .map((s) => s.address)
+                            .join(", ") ||
+                          "—"}
+                      </p>
+                      {delivery.shipping_label?.delivery?.notes && (
+                        <p className="text-xs text-amber-700 mt-1">
+                          {delivery.shipping_label.delivery.notes}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
                   {/* Action Buttons */}
                   {(["pending", "in_progress"] as const).includes(
                     delivery.status
                   ) && (
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-3 pt-2">
                       {delivery.status === "pending" && (
                         <Button
                           type="button"
-                          className="w-full bg-gradient-to-r from-[#3456FF] to-[#8763FF] hover:from-[#3456FF]/90 hover:to-[#8763FF]/90 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="w-full min-h-[48px] sm:min-h-[44px] cursor-pointer select-none touch-manipulation relative z-10 bg-gradient-to-r from-[#3456FF] to-[#8763FF] hover:from-[#3456FF]/90 hover:to-[#8763FF]/90 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                           onClick={(e) => {
-                            console.log("=== Button Click Event ===");
-                            console.log("Event:", e);
                             e.preventDefault();
                             e.stopPropagation();
-                            console.log(
-                              "Starting delivery for ID:",
-                              delivery.id
-                            );
                             handleStatusUpdate(delivery.id, "in_progress");
                           }}
                         >
-                          Start Delivery
+                          Start delivery
                         </Button>
                       )}
                       {delivery.status === "in_progress" && (
@@ -1707,18 +1766,20 @@ export default function CourierContent() {
                               handleStatusUpdate(delivery.id, "completed");
                             }}
                             disabled={(() => {
-                              const allStopsCompleted =
-                                delivery.optimized_route?.stops?.every(
-                                  (stop) => stop.status === "completed"
-                                ) || false;
+                              const routeStops = delivery.optimized_route?.stops || [];
+                              const hasRouteStops = routeStops.length > 0;
+                              const allStopsCompleted = !hasRouteStops || routeStops.every(
+                                (stop) => stop.status === "completed"
+                              );
                               const podUploaded = !!delivery.pod_file;
                               return !allStopsCompleted || !podUploaded;
                             })()}
                             title={(() => {
-                              const allStopsCompleted =
-                                delivery.optimized_route?.stops?.every(
-                                  (stop) => stop.status === "completed"
-                                ) || false;
+                              const routeStops = delivery.optimized_route?.stops || [];
+                              const hasRouteStops = routeStops.length > 0;
+                              const allStopsCompleted = !hasRouteStops || routeStops.every(
+                                (stop) => stop.status === "completed"
+                              );
                               const podUploaded = !!delivery.pod_file;
                               if (!allStopsCompleted && !podUploaded) {
                                 return "Complete all stops and upload POD to enable this button";

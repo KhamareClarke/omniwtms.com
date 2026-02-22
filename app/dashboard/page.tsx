@@ -1265,7 +1265,10 @@ export default function DashboardPage() {
   const [adminCouriers, setAdminCouriers] = useState<any[]>([]);
   const [adminCustomers, setAdminCustomers] = useState<any[]>([]);
   const [adminLoading, setAdminLoading] = useState(false);
-  const [adminTab, setAdminTab] = useState<"organizations" | "couriers" | "customers">("organizations");
+  const [adminTab, setAdminTab] = useState<"organizations" | "couriers" | "customers" | "activity">("organizations");
+  const [adminAuditLog, setAdminAuditLog] = useState<any[]>([]);
+  const [adminAuditLoading, setAdminAuditLoading] = useState(false);
+  const [adminAuditMigrationSuggested, setAdminAuditMigrationSuggested] = useState(false);
   const [loading, setLoading] = useState(true);
   const [recentActivities, setRecentActivities] = useState<WarehouseActivity[]>(
     []
@@ -1463,6 +1466,30 @@ export default function DashboardPage() {
       toast.error(e?.message || "Failed to update");
     }
   };
+
+  const fetchAdminAuditLog = async () => {
+    setAdminAuditLoading(true);
+    setAdminAuditMigrationSuggested(false);
+    try {
+      const res = await fetch("/api/admin/audit-log?limit=100");
+      const data = await res.json();
+      if (res.ok) {
+        setAdminAuditLog(Array.isArray(data?.list) ? data.list : []);
+        setAdminAuditMigrationSuggested(!!data?.migration_suggested);
+      } else {
+        setAdminAuditLog([]);
+      }
+    } catch (e) {
+      console.error("Audit log fetch error:", e);
+      setAdminAuditLog([]);
+    } finally {
+      setAdminAuditLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isAdmin && adminTab === "activity") fetchAdminAuditLog();
+  }, [isAdmin, adminTab]);
 
   // Update the useEffect to call inspectDatabase (client only)
   useEffect(() => {
@@ -2391,8 +2418,8 @@ export default function DashboardPage() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-700"></div>
             </div>
           ) : (
-            <Tabs value={adminTab} onValueChange={(v) => setAdminTab(v as "organizations" | "couriers" | "customers")} className="w-full">
-              <TabsList className="grid w-full grid-cols-3 mb-4">
+            <Tabs value={adminTab} onValueChange={(v) => setAdminTab(v as "organizations" | "couriers" | "customers" | "activity")} className="w-full">
+              <TabsList className="grid w-full grid-cols-4 mb-4">
                 <TabsTrigger value="organizations" className="flex items-center gap-2">
                   <Building2 className="h-4 w-4" />
                   Organizations
@@ -2407,6 +2434,11 @@ export default function DashboardPage() {
                   <Users className="h-4 w-4" />
                   Customers
                   <Badge variant="secondary" className="ml-1">{adminCustomers.length}</Badge>
+                </TabsTrigger>
+                <TabsTrigger value="activity" className="flex items-center gap-2">
+                  <Activity className="h-4 w-4" />
+                  Activity log
+                  <Badge variant="secondary" className="ml-1">{adminAuditLog.length}</Badge>
                 </TabsTrigger>
               </TabsList>
 
@@ -2615,6 +2647,89 @@ export default function DashboardPage() {
                               </TableCell>
                             </TableRow>
                           ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+              </TabsContent>
+
+              <TabsContent value="activity" className="mt-0">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Activity className="h-5 w-5" /> Activity log
+                  </CardTitle>
+                  <CardDescription>Delivery status updates, assignments, and audit events. All activity emails go to admin.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex justify-end mb-3">
+                    <Button size="sm" variant="outline" onClick={fetchAdminAuditLog} disabled={adminAuditLoading}>
+                      {adminAuditLoading ? "Loading…" : "Refresh"}
+                    </Button>
+                  </div>
+                  <div className="rounded-md border overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Time</TableHead>
+                          <TableHead>Package / Delivery</TableHead>
+                          <TableHead>Action</TableHead>
+                          <TableHead>Actor</TableHead>
+                          <TableHead>Old → New</TableHead>
+                          <TableHead>POD</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {adminAuditLog.length === 0 && !adminAuditLoading ? (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center py-8">
+                              <div className="text-gray-500 space-y-1">
+                                {adminAuditMigrationSuggested ? (
+                                  <>
+                                    <p className="font-medium">Activity logging not set up</p>
+                                    <p className="text-sm">Run the migration <code className="bg-gray-100 px-1 rounded text-xs">20250625000000_delivery_audit_and_timeline.sql</code> in Supabase, then refresh.</p>
+                                  </>
+                                ) : (
+                                  <>
+                                    <p className="font-medium">No activity yet</p>
+                                    <p className="text-sm">Activity appears when you assign a delivery (Couriers) or update status (Customer Activity / courier app).</p>
+                                  </>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          adminAuditLog.map((entry: any) => {
+                            const podUrl = entry.action === "pod_uploaded" ? entry.new_value : entry.metadata?.pod_file;
+                            return (
+                            <TableRow key={entry.id}>
+                              <TableCell className="text-gray-600 text-sm whitespace-nowrap">
+                                {entry.created_at ? new Date(entry.created_at).toLocaleString() : "—"}
+                              </TableCell>
+                              <TableCell>
+                                <span className="font-mono text-xs">{entry.package_id || entry.delivery_id || "—"}</span>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="secondary">{entry.action || "—"}</Badge>
+                              </TableCell>
+                              <TableCell>{entry.actor_type || "—"}</TableCell>
+                              <TableCell className="text-sm text-gray-600">
+                                {entry.old_value != null || entry.new_value != null
+                                  ? `${entry.old_value ?? "—"} → ${entry.new_value ?? "—"}`
+                                  : "—"}
+                              </TableCell>
+                              <TableCell>
+                                {podUrl ? (
+                                  <a href={podUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-xs">View POD</a>
+                                ) : (
+                                  "—"
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                          })
                         )}
                       </TableBody>
                     </Table>

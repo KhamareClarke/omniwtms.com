@@ -51,6 +51,9 @@ import { toast } from "sonner";
 
 interface CourierDelivery {
   id: string;
+  package_id?: string | null;
+  created_at?: string | null;
+  customer_name?: string | null;
   courier_id: string;
   courier_name: string;
   current_location: {
@@ -1107,12 +1110,15 @@ export default function LiveTracking() {
           .select(
             `
             id,
+            package_id,
             status,
             courier_id,
             pod_file,
             client_id,
             notes,
             current_address,
+            created_at,
+            shipping_label,
             couriers!courier_id (
               id,
               name,
@@ -1134,8 +1140,9 @@ export default function LiveTracking() {
           )
           .eq("client_id", clientId)
           .or(
-            "status.eq.in_progress,status.eq.completed,status.eq.failed,status.eq.pending"
-          );
+            "status.eq.in_progress,status.eq.out_for_delivery,status.eq.completed,status.eq.failed,status.eq.pending"
+          )
+          .order("created_at", { ascending: false });
 
         if (deliveriesError) {
           console.error("Error fetching deliveries:", deliveriesError);
@@ -1168,19 +1175,28 @@ export default function LiveTracking() {
             };
           });
 
-          // Use courier coordinates if available
-          const courierObj = delivery.couriers?.[0];
+          // Use courier coordinates if available (Supabase may return relation as object or array)
+          const courierObj = Array.isArray(delivery.couriers)
+            ? delivery.couriers[0]
+            : delivery.couriers;
           const courierLat = courierObj?.current_latitude || null;
           const courierLng = courierObj?.current_longitude || null;
 
           const pickupAddress = stops[0]?.address || "Unknown";
           const deliveryAddress = stops[stops.length - 1]?.address || "Unknown";
 
+          const customerName = (delivery.shipping_label as any)?.delivery?.address
+            ? "Customer delivery"
+            : null;
+
           return {
             id: delivery.id,
+            package_id: delivery.package_id || null,
+            created_at: delivery.created_at || null,
+            customer_name: customerName,
             courier_id: delivery.courier_id,
             courier_name:
-              courierObj?.name || `Courier ${delivery.courier_id.slice(0, 8)}`,
+              (courierObj?.name && String(courierObj.name).trim()) || "Courier",
             current_location: {
               latitude: courierLat,
               longitude: courierLng,
@@ -1202,7 +1218,10 @@ export default function LiveTracking() {
             stops: stops.map((stop, index) => ({
               id: stop.id,
               address: stop.address,
-              status: stop.status || "pending",
+              status:
+                delivery.status === "completed"
+                  ? "completed"
+                  : (stop.status || "pending"),
               estimated_arrival:
                 stop.estimated_arrival ||
                 new Date(Date.now() + (index + 1) * 1800000).toISOString(),
@@ -1281,7 +1300,7 @@ export default function LiveTracking() {
 
   // Get active (in_progress), completed, failed, and pending deliveries
   const inProgressDeliveries = activeCouriers.filter(
-    (d) => d.current_delivery.status === "in_progress"
+    (d) => d.current_delivery.status === "in_progress" || d.current_delivery.status === "out_for_delivery"
   );
   const completedDeliveries = activeCouriers.filter(
     (d) => d.current_delivery.status === "completed"
@@ -1405,7 +1424,7 @@ export default function LiveTracking() {
                       ? "bg-green-500"
                       : delivery.current_delivery.status === "failed"
                       ? "bg-red-500"
-                      : delivery.current_delivery.status === "in_progress"
+                      : delivery.current_delivery.status === "in_progress" || delivery.current_delivery.status === "out_for_delivery"
                       ? "bg-blue-500"
                       : "bg-gray-500"
                   }`}
@@ -1416,7 +1435,7 @@ export default function LiveTracking() {
                         <CheckCircle className="h-5 w-5 text-white" />
                       ) : delivery.current_delivery.status === "failed" ? (
                         <XCircle className="h-5 w-5 text-white" />
-                      ) : delivery.current_delivery.status === "in_progress" ? (
+                      ) : delivery.current_delivery.status === "in_progress" || delivery.current_delivery.status === "out_for_delivery" ? (
                         <Clock className="h-5 w-5 text-white" />
                       ) : (
                         <AlertCircle className="h-5 w-5 text-white" />
@@ -1426,6 +1445,8 @@ export default function LiveTracking() {
                           ? "DELIVERY COMPLETED"
                           : delivery.current_delivery.status === "failed"
                           ? "DELIVERY FAILED"
+                          : delivery.current_delivery.status === "out_for_delivery"
+                          ? "OUT FOR DELIVERY"
                           : delivery.current_delivery.status === "in_progress"
                           ? "DELIVERY IN PROGRESS"
                           : "DELIVERY PENDING"}
@@ -1436,7 +1457,7 @@ export default function LiveTracking() {
                         ? "✓ Success"
                         : delivery.current_delivery.status === "failed"
                         ? "✗ Failed"
-                        : delivery.current_delivery.status === "in_progress"
+                        : delivery.current_delivery.status === "in_progress" || delivery.current_delivery.status === "out_for_delivery"
                         ? "⏳ Active"
                         : "⏸ Pending"}
                     </div>
@@ -1445,8 +1466,16 @@ export default function LiveTracking() {
 
                 <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4">
                   <h2 className="text-xl font-bold text-white">
-                    Delivery #{index + 1} - {delivery.id.slice(0, 8)}
+                    {delivery.package_id || `Delivery #${delivery.id.slice(0, 8)}`}
                   </h2>
+                  {delivery.created_at && (
+                    <p className="text-blue-100 text-sm mt-1">
+                      {new Date(delivery.created_at).toLocaleString(undefined, {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })}
+                    </p>
+                  )}
                 </div>
 
                 <div className="p-6">
@@ -1460,19 +1489,30 @@ export default function LiveTracking() {
                         </h3>
                         <div className="space-y-3">
                           <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">ID:</span>
+                            <span className="text-sm text-gray-600">Package ID:</span>
                             <span className="font-mono text-sm font-medium text-gray-800">
-                              {delivery.id}
+                              {delivery.package_id || delivery.id.slice(0, 8)}
                             </span>
                           </div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-gray-600">
-                              Courier ID:
-                            </span>
-                            <span className="font-mono text-sm font-medium text-gray-800">
-                              {delivery.courier_id}
-                            </span>
-                          </div>
+                          {delivery.created_at && (
+                            <div className="flex justify-between">
+                              <span className="text-sm text-gray-600">Date & time:</span>
+                              <span className="font-medium text-gray-800">
+                                {new Date(delivery.created_at).toLocaleString(undefined, {
+                                  dateStyle: "medium",
+                                  timeStyle: "short",
+                                })}
+                              </span>
+                            </div>
+                          )}
+                          {delivery.customer_name && (
+                            <div className="flex justify-between">
+                              <span className="text-sm text-gray-600">Customer:</span>
+                              <span className="font-medium text-gray-800">
+                                {delivery.customer_name}
+                              </span>
+                            </div>
+                          )}
                           <div className="flex justify-between">
                             <span className="text-sm text-gray-600">
                               Courier Name:
@@ -1495,7 +1535,7 @@ export default function LiveTracking() {
                                       "failed"
                                     ? "bg-red-500"
                                     : delivery.current_delivery.status ===
-                                      "in_progress"
+                                      "in_progress" || delivery.current_delivery.status === "out_for_delivery"
                                     ? "bg-blue-500"
                                     : "bg-gray-400"
                                 }`}
@@ -1509,7 +1549,7 @@ export default function LiveTracking() {
                                       "failed"
                                     ? "destructive"
                                     : delivery.current_delivery.status ===
-                                      "in_progress"
+                                      "in_progress" || delivery.current_delivery.status === "out_for_delivery"
                                     ? "secondary"
                                     : "outline"
                                 }
@@ -1528,6 +1568,12 @@ export default function LiveTracking() {
                                   <div className="flex items-center gap-2">
                                     <XCircle className="h-4 w-4" />
                                     <span className="text-white">FAILED</span>
+                                  </div>
+                                ) : delivery.current_delivery.status ===
+                                  "out_for_delivery" ? (
+                                  <div className="flex items-center gap-2">
+                                    <Clock className="h-4 w-4" />
+                                    <span>OUT FOR DELIVERY</span>
                                   </div>
                                 ) : delivery.current_delivery.status ===
                                   "in_progress" ? (

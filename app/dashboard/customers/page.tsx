@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/auth/SupabaseClient";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { AnimatedGradientBackground } from "@/components/ui/animated-gradient-background";
 import { AIParticleEffect } from "@/components/ui/ai-particle-effect";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,6 +42,7 @@ export default function CustomersPage() {
   const [currentClientId, setCurrentClientId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [formMessage, setFormMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   // Get current client id from localStorage
   useEffect(() => {
@@ -95,44 +96,54 @@ export default function CustomersPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Form submitted:", form);
-
+    setFormMessage(null);
     setLoading(true);
 
     try {
       if (!form.name || !form.contact || !form.password) {
-        toast.error("Name, Contact, and Password are required");
+        const msg = "Name, Contact, and Password are required";
+        setFormMessage({ type: "error", text: msg });
+        toast.error(msg);
         return;
       }
 
-      // Validate weekly fee is a valid number if provided
       if (form.weekly_fee && isNaN(Number(form.weekly_fee))) {
-        toast.error("Weekly fee must be a valid number");
+        const msg = "Weekly fee must be a valid number";
+        setFormMessage({ type: "error", text: msg });
+        toast.error(msg);
         return;
       }
 
       if (!currentClientId) {
-        toast.error("No client ID found. Please login again.");
+        const msg = "No client ID found. Please login again.";
+        setFormMessage({ type: "error", text: msg });
+        toast.error(msg);
         return;
       }
 
-      // Check if customer with this contact number already exists
-      const { data: existingCustomer } = await supabase
+      // Check if customer with this contact number already exists (use maybeSingle to avoid error when no row)
+      const { data: existingCustomer, error: existingError } = await supabase
         .from("customers")
         .select("name")
         .eq("client_id", currentClientId)
         .eq("contact_number", form.contact)
-        .single();
+        .maybeSingle();
 
-      if (existingCustomer) {
-        toast.error(
-          `A customer with contact number ${form.contact} already exists`
-        );
-        setLoading(false);
+      if (existingError) {
+        console.error("Error checking existing customer:", existingError);
+        const msg = "Could not verify customer. Please try again.";
+        setFormMessage({ type: "error", text: msg });
+        toast.error(msg);
         return;
       }
 
-      console.log("Adding customer to database...");
+      if (existingCustomer) {
+        const msg = `A customer with contact number ${form.contact} already exists`;
+        setFormMessage({ type: "error", text: msg });
+        toast.error(msg);
+        return;
+      }
+
       const { data, error } = await supabase
         .from("customers")
         .insert([
@@ -140,7 +151,7 @@ export default function CustomersPage() {
             name: form.name,
             contact_number: form.contact,
             password: form.password,
-            email: form.email || null,
+            email: form.email?.trim() || null,
             weekly_fee: form.weekly_fee ? parseFloat(form.weekly_fee) : null,
             client_id: currentClientId,
             created_at: new Date().toISOString(),
@@ -150,34 +161,34 @@ export default function CustomersPage() {
 
       if (error) {
         console.error("Error adding customer:", error);
+        let msg = error.message;
         if (error.code === "23505") {
-          if (error.message.includes("customers_client_contact_unique")) {
-            toast.error(
-              `A customer with contact number ${form.contact} already exists`
-            );
-          } else if (error.message.includes("customers_email_key")) {
-            toast.error("A customer with this email already exists");
-          } else {
-            toast.error("Failed to add customer: " + error.message);
+          if (error.message.includes("customers_client_contact_unique") || error.message.includes("contact_number")) {
+            msg = `A customer with contact number ${form.contact} already exists`;
+          } else if (error.message.includes("customers_email_key") || error.message.includes("email")) {
+            msg = "A customer with this email already exists";
           }
-        } else {
-          toast.error("Failed to add customer: " + error.message);
         }
-      } else {
-        console.log("Customer added:", data);
-        toast.success("Customer added successfully!");
-        setForm({
-          name: "",
-          contact: "",
-          password: "",
-          email: "",
-          weekly_fee: "",
-        });
-        fetchCustomers(currentClientId);
+        setFormMessage({ type: "error", text: msg });
+        toast.error(msg);
+        return;
       }
+
+      setFormMessage({ type: "success", text: "Customer added successfully! They will appear in the list below." });
+      toast.success("Customer added successfully!");
+      setForm({
+        name: "",
+        contact: "",
+        password: "",
+        email: "",
+        weekly_fee: "",
+      });
+      await fetchCustomers(currentClientId);
     } catch (error) {
       console.error("Exception adding customer:", error);
-      toast.error("An unexpected error occurred");
+      const msg = error instanceof Error ? error.message : "An unexpected error occurred";
+      setFormMessage({ type: "error", text: msg });
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -377,6 +388,17 @@ export default function CustomersPage() {
                   </div>
                 </div>
 
+                {formMessage && (
+                  <div
+                    className={`rounded-lg p-3 text-sm ${
+                      formMessage.type === "success"
+                        ? "bg-green-50 text-green-800 border border-green-200"
+                        : "bg-red-50 text-red-800 border border-red-200"
+                    }`}
+                  >
+                    {formMessage.text}
+                  </div>
+                )}
                 <Button
                   type="submit"
                   disabled={loading}

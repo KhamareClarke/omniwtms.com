@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import * as XLSX from "xlsx";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import {
   Table,
@@ -106,6 +106,8 @@ export default function CustomerActivityPage() {
   const [expandedActivity, setExpandedActivity] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<string>("all");
   const [loading, setLoading] = useState(true);
+  const [customerDeliveries, setCustomerDeliveries] = useState<any[]>([]);
+  const [updatingDeliveryId, setUpdatingDeliveryId] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<{
     start: Date | null;
     end: Date | null;
@@ -150,35 +152,55 @@ export default function CustomerActivityPage() {
 
       setCustomers(customersData || []);
 
-      // Fetch inventory items for this client
+      // Fetch inventory (optional – don’t block page if table missing or RLS blocks)
       const { data: inventory, error: inventoryError } = await supabase
         .from("customer_inventory")
         .select("*")
         .eq("client_id", user.id)
         .order("created_at", { ascending: false });
-
       if (inventoryError) {
-        console.error("Error fetching inventory:", inventoryError);
-        toast.error("Failed to load inventory");
-        return;
+        console.warn("Customer inventory fetch skipped:", inventoryError);
+        setInventory([]);
+      } else {
+        setInventory(inventory || []);
       }
 
-      setInventory(inventory || []);
-
-      // Fetch activities for this client
+      // Fetch activities (optional – warehouse_operations may not exist)
       const { data: activities, error: activitiesError } = await supabase
         .from("warehouse_operations")
         .select("*")
         .eq("client_id", user.id)
         .order("created_at", { ascending: false });
-
       if (activitiesError) {
-        console.error("Error fetching activities:", activitiesError);
-        toast.error("Failed to load activities");
-        return;
+        console.warn("Activities fetch skipped:", activitiesError);
+        setActivities([]);
+      } else {
+        setActivities(activities || []);
       }
 
-      setActivities(activities || []);
+      // Deliveries assigned to customers (for status update and visibility)
+      try {
+        const { data: deliveriesData, error: delError } = await supabase
+          .from("deliveries")
+          .select("id, package_id, status, created_at, customer_id, products, shipping_label")
+          .eq("client_id", user.id)
+          .not("customer_id", "is", null)
+          .order("created_at", { ascending: false });
+        if (delError) {
+          console.warn("Deliveries fetch error:", delError);
+          setCustomerDeliveries([]);
+        } else {
+          const list = Array.isArray(deliveriesData) ? deliveriesData : [];
+          const withNames = list.map((d: any) => {
+            const cust = customersData?.find((c: any) => c.id === d.customer_id);
+            return { ...d, customers: cust ? { name: cust.name, email: cust.email } : null };
+          });
+          setCustomerDeliveries(withNames);
+        }
+      } catch (e) {
+        console.warn("Deliveries fetch skipped:", e);
+        setCustomerDeliveries([]);
+      }
     } catch (error) {
       console.error("Error in fetchCustomerData:", error);
       toast.error("An error occurred while loading data");
@@ -268,6 +290,45 @@ export default function CustomerActivityPage() {
       });
     }
   }, [selectedCustomer]);
+
+  const deliveryStatusOptions = [
+    { value: "pending", label: "Pending" },
+    { value: "in_progress", label: "In Progress" },
+    { value: "out_for_delivery", label: "Out for Delivery" },
+    { value: "completed", label: "Delivered" },
+    { value: "failed", label: "Failed" },
+  ] as const;
+
+  const updateDeliveryStatus = async (deliveryId: string, newStatus: string) => {
+    const dbStatus = newStatus;
+    setUpdatingDeliveryId(deliveryId);
+    try {
+      const { error } = await supabase
+        .from("deliveries")
+        .update({ status: dbStatus, updated_at: new Date().toISOString() })
+        .eq("id", deliveryId);
+      if (error) throw error;
+      setCustomerDeliveries((prev) =>
+        prev.map((d) => (d.id === deliveryId ? { ...d, status: dbStatus } : d))
+      );
+      toast.success("Status updated. Customer will be notified.");
+      await fetch("/api/notify-delivery-status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          delivery_id: deliveryId,
+          new_status: dbStatus,
+          notify_organization: false,
+          triggered_by: "organization",
+        }),
+      });
+    } catch (e) {
+      console.error("Update delivery status:", e);
+      toast.error("Failed to update status");
+    } finally {
+      setUpdatingDeliveryId(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -442,6 +503,122 @@ export default function CustomerActivityPage() {
                         </TableCell>
                       </TableRow>
                     ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Customer Orders & Deliveries – update status (reflects in customer portal + email) */}
+        <Card className="glass-card border-gray-200 shadow-md relative mb-6">
+          <div className="absolute -z-10 inset-0 bg-gradient-to-br from-[#3456FF]/5 via-transparent to-[#8763FF]/5 rounded-lg opacity-50"></div>
+          <CardHeader>
+            <CardTitle className="text-xl font-heading font-semibold flex items-center">
+              <div className="flex items-center">
+                <span className="w-1.5 h-5 bg-gradient-to-b from-[#3456FF] to-[#8763FF] rounded-full mr-2"></span>
+                <span className="bg-gradient-to-r from-[#3456FF] to-[#8763FF] bg-clip-text text-transparent">
+                  Customer Orders & Deliveries
+                </span>
+                <Badge className="ml-2 bg-[#3456FF]/10 text-[#3456FF] border-[#3456FF]/20">
+                  {customerDeliveries.length} assigned
+                </Badge>
+              </div>
+            </CardTitle>
+            <p className="text-sm text-gray-500 mt-1">
+              Update status here; the customer sees it in their portal and receives an email.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="bg-gray-50/80 backdrop-blur-sm">
+                  <TableRow>
+                    <TableHead className="font-semibold text-gray-700 font-heading">Customer Name</TableHead>
+                    <TableHead className="font-semibold text-gray-700 font-heading">Order / Package ID</TableHead>
+                    <TableHead className="font-semibold text-gray-700 font-heading">Products</TableHead>
+                    <TableHead className="font-semibold text-gray-700 font-heading">Current Status</TableHead>
+                    <TableHead className="font-semibold text-gray-700 font-heading">Update Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {customerDeliveries.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                        No deliveries assigned to customers yet. Assign from <strong>Couriers</strong> → Warehouse to Customer Address and select a customer.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    customerDeliveries.map((d) => {
+                      const customer = Array.isArray(d.customers) ? d.customers[0] : d.customers;
+                      const customerName = customer?.name ?? "—";
+                      const customerEmail = customer?.email ?? "";
+                      const products = d.products || [];
+                      const productsSummary = Array.isArray(products)
+                        ? products.map((p: any) => `${p.name || p.sku || "Item"} × ${p.quantity ?? 1}`).join("; ")
+                        : "—";
+                      const statusLabel =
+                        d.status === "completed"
+                          ? "Delivered"
+                          : d.status === "out_for_delivery"
+                          ? "Out for Delivery"
+                          : d.status === "in_progress"
+                          ? "In Progress"
+                          : d.status === "failed"
+                          ? "Failed"
+                          : "Pending";
+                      const statusValue =
+                        d.status === "completed"
+                          ? "completed"
+                          : d.status === "out_for_delivery"
+                          ? "out_for_delivery"
+                          : d.status === "in_progress"
+                          ? "in_progress"
+                          : d.status === "failed"
+                          ? "failed"
+                          : "pending";
+                      return (
+                        <TableRow key={d.id} className="hover:bg-gray-50/70">
+                          <TableCell className="font-medium">{customerName}</TableCell>
+                          <TableCell className="font-mono text-sm">{d.package_id || d.id?.slice(0, 8) || "—"}</TableCell>
+                          <TableCell className="text-sm text-gray-600 max-w-[200px] truncate" title={productsSummary}>
+                            {productsSummary}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              className={
+                                d.status === "completed"
+                                  ? "bg-green-100 text-green-800"
+                                  : d.status === "in_progress" || d.status === "out_for_delivery"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : d.status === "failed"
+                                  ? "bg-red-100 text-red-800"
+                                  : "bg-amber-100 text-amber-800"
+                              }
+                            >
+                              {statusLabel}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <select
+                              className="rounded-md border border-gray-300 px-2 py-1.5 text-sm bg-white min-w-[160px]"
+                              value={statusValue}
+                              disabled={updatingDeliveryId === d.id}
+                              onChange={(e) => updateDeliveryStatus(d.id, e.target.value)}
+                            >
+                              {deliveryStatusOptions.map((opt) => (
+                                <option key={opt.value} value={opt.value}>
+                                  {opt.label}
+                                </option>
+                              ))}
+                            </select>
+                            {updatingDeliveryId === d.id && (
+                              <span className="ml-2 text-xs text-gray-500">Updating…</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>

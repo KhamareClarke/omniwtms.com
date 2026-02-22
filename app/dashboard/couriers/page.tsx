@@ -234,11 +234,14 @@ export default function CouriersPage() {
     source_warehouse_id: "",
     destination_warehouse_id: "",
     client_address: "",
+    client_postal_code: "",
     pickup_time: "",
     notes: "",
     products: [{ name: "", quantity: 0 }],
   });
   const [deliveryStep, setDeliveryStep] = useState(1);
+  const [customers, setCustomers] = useState<Array<{ id: string; name: string; contact_number?: string; email?: string }>>([]);
+  const [selectedDeliveryCustomerId, setSelectedDeliveryCustomerId] = useState<string>("");
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [lastDeliveryDetails, setLastDeliveryDetails] =
     useState<Delivery | null>(null);
@@ -260,6 +263,7 @@ export default function CouriersPage() {
   const [isCalculatingRoute, setIsCalculatingRoute] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
   const [selectedRoute, setSelectedRoute] = useState<RouteOption | null>(null);
+  const [assignWithoutRoute, setAssignWithoutRoute] = useState(false);
   const [showLabelDialog, setShowLabelDialog] = useState(false);
   const [showRouteDetailsDialog, setShowRouteDetailsDialog] = useState(false);
   const [selectedLabel, setSelectedLabel] = useState<ShippingLabel | null>(
@@ -272,6 +276,12 @@ export default function CouriersPage() {
   useEffect(() => {
     checkAuthAndFetchData();
   }, []);
+
+  useEffect(() => {
+    if (deliveryType === "warehouse" && deliveryStep > 5) {
+      setDeliveryStep(5);
+    }
+  }, [deliveryType, deliveryStep]);
 
   const checkAuthAndFetchData = async () => {
     const currentUser = localStorage.getItem("currentUser");
@@ -286,6 +296,7 @@ export default function CouriersPage() {
         fetchCouriers(userData.id),
         fetchWarehouses(userData.id),
         fetchDeliveries(userData.id),
+        fetchCustomers(userData.id),
       ]);
     } catch (error) {
       console.error("Error loading data:", error);
@@ -324,6 +335,38 @@ export default function CouriersPage() {
     } catch (error) {
       console.error("Error fetching warehouses:", error);
       toast.error("Failed to fetch warehouses");
+    }
+  };
+
+  const fetchCustomers = async (clientId: string) => {
+    try {
+      const { data, error } = await supabaseClient
+        .from("customers")
+        .select("id, name, contact_number, email")
+        .eq("client_id", clientId)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setCustomers(data || []);
+    } catch (error) {
+      console.error("Error fetching customers:", error);
+      toast.error("Failed to fetch customers");
+    }
+  };
+
+  const sendEmail = async (to: string | string[], subject: string, html: string) => {
+    try {
+      const res = await fetch("/api/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to, subject, html }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        console.error("Send email failed:", data.error || res.statusText);
+      }
+    } catch (e) {
+      console.error("Send email error:", e);
     }
   };
 
@@ -501,6 +544,17 @@ export default function CouriersPage() {
       setShowAddDialog(false);
       resetForm();
       fetchCouriers(userData.id);
+
+      // Email: notify new courier
+      sendEmail(
+        formData.email,
+        "Welcome – OmniWTMS Courier account",
+        `<p>Hello ${formData.name},</p>
+        <p>Your courier account has been created.</p>
+        <p><strong>Email:</strong> ${formData.email}</p>
+        <p><strong>Password:</strong> ${formData.password}</p>
+        <p>Sign in at the courier portal to view and complete deliveries.</p>`
+      );
     } catch (error: any) {
       console.error("Error adding courier:", error);
       toast.error(error.message || "Failed to add courier");
@@ -514,10 +568,9 @@ export default function CouriersPage() {
     setIsLoading(true);
 
     try {
-      // Validate route optimization
-      if (!selectedRoute) {
+      if (!selectedRoute && !assignWithoutRoute) {
         toast.error(
-          "Please optimize and select a route before assigning delivery"
+          "Please optimize and select a route, or use 'Assign with address only' to skip route."
         );
         setIsLoading(false);
         return;
@@ -567,7 +620,7 @@ export default function CouriersPage() {
               ? warehouses.find(
                   (w) => w.id === deliveryFormData.destination_warehouse_id
                 )?.location || ""
-              : deliveryFormData.client_address,
+              : [deliveryFormData.client_address, deliveryFormData.client_postal_code].filter(Boolean).join(", "),
           notes: deliveryFormData.notes || "No special instructions",
         },
         courier: {
@@ -581,20 +634,21 @@ export default function CouriersPage() {
         createdAt: new Date().toISOString(),
       };
 
-      // Prepare the optimized route data
-      const optimizedRoute = {
-        name: selectedRoute.name,
-        description: selectedRoute.description,
-        distance: selectedRoute.distance,
-        duration: selectedRoute.duration,
-        fuelConsumption: selectedRoute.fuelConsumption,
-        totalFuelCost: selectedRoute.totalFuelCost,
-        stops: selectedRoute.stops,
-        advantages: selectedRoute.advantages,
-        roadType: selectedRoute.roadType,
-      };
+      const optimizedRoute =
+        selectedRoute && !assignWithoutRoute
+          ? {
+              name: selectedRoute.name,
+              description: selectedRoute.description,
+              distance: selectedRoute.distance,
+              duration: selectedRoute.duration,
+              fuelConsumption: selectedRoute.fuelConsumption,
+              totalFuelCost: selectedRoute.totalFuelCost,
+              stops: selectedRoute.stops,
+              advantages: selectedRoute.advantages,
+              roadType: selectedRoute.roadType,
+            }
+          : null;
 
-      // Create delivery payload
       const deliveryPayload = {
         courier_id: selectedCourier,
         package_id: packageId,
@@ -605,8 +659,12 @@ export default function CouriersPage() {
         delivery_type: deliveryType,
         products: productsWithDetails,
         shipping_label: shippingLabel,
-        optimized_route: optimizedRoute,
+        ...(optimizedRoute && { optimized_route: optimizedRoute }),
         created_at: new Date().toISOString(),
+        ...(deliveryType === "client" &&
+          selectedDeliveryCustomerId && {
+            customer_id: selectedDeliveryCustomerId,
+          }),
       };
 
       // Create the delivery record
@@ -630,7 +688,7 @@ export default function CouriersPage() {
         throw new Error(`Failed to create delivery: ${deliveryError.message}`);
       }
 
-      // Insert all optimized route stops into delivery_stops table
+      // Insert optimized route waypoint stops only when we have a route
       if (
         optimizedRoute &&
         optimizedRoute.stops &&
@@ -649,7 +707,7 @@ export default function CouriersPage() {
           status: "pending",
           latitude: stop.latitude || null,
           longitude: stop.longitude || null,
-          estimated_time: null, // or set if you have it
+          estimated_time: null,
         }));
         const { error: stopsInsertError } = await supabaseClient
           .from("delivery_stops")
@@ -659,11 +717,10 @@ export default function CouriersPage() {
             "Error inserting optimized route stops:",
             stopsInsertError
           );
-          // Optionally, you can throw here or handle gracefully
         }
       }
 
-      // Prepare stops data
+      // Always insert pickup + delivery stops (required for courier to see address)
       const stops = [
         {
           delivery_id: deliveryData.id,
@@ -685,7 +742,7 @@ export default function CouriersPage() {
               ? warehouses.find(
                   (w) => w.id === deliveryFormData.destination_warehouse_id
                 )?.location
-              : deliveryFormData.client_address,
+              : [deliveryFormData.client_address, deliveryFormData.client_postal_code].filter(Boolean).join(", "),
           stop_type: "delivery" as const,
           sequence: 2,
           status: "pending" as const,
@@ -723,6 +780,42 @@ export default function CouriersPage() {
       setShowSuccessDialog(true);
       setShowAssignDeliveryDialog(false);
       resetDeliveryForm();
+
+      // Email: notify courier and customer (if delivery to customer)
+      const deliveryAddress =
+        deliveryType === "warehouse"
+          ? warehouses.find((w) => w.id === deliveryFormData.destination_warehouse_id)?.location
+          : [deliveryFormData.client_address, deliveryFormData.client_postal_code].filter(Boolean).join(", ");
+      const courierEmail = selectedCourierData.email;
+      if (courierEmail) {
+        sendEmail(
+          courierEmail,
+          `Delivery assigned: ${packageId}`,
+          `<p>You have been assigned a new delivery.</p>
+          <p><strong>Package ID:</strong> ${packageId}</p>
+          <p><strong>Pickup:</strong> ${selectedWarehouse.location}</p>
+          <p><strong>Delivery to:</strong> ${deliveryAddress}</p>
+          <p><strong>Pickup time:</strong> ${deliveryFormData.pickup_time}</p>
+          <p><strong>Priority:</strong> ${deliveryFormData.priority}</p>
+          <p>Log in to your courier dashboard to view details and start delivery.</p>`
+        );
+      }
+      // Customer email only when org updates status (Customer Activity), not on assignment
+
+      // Notify admin of new assignment
+      try {
+        await fetch("/api/notify-delivery-assigned", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            delivery_id: deliveryData.id,
+            package_id: packageId,
+            pickup: selectedWarehouse?.location,
+            delivery_to: deliveryAddress,
+            courier_name: selectedCourierData?.name,
+          }),
+        });
+      } catch (_) {}
 
       // Update courier's delivery count
       const { error: courierUpdateError } = await supabaseClient
@@ -767,6 +860,7 @@ export default function CouriersPage() {
       source_warehouse_id: "",
       destination_warehouse_id: "",
       client_address: "",
+      client_postal_code: "",
       pickup_time: "",
       notes: "",
       products: [{ name: "", quantity: 0 }],
@@ -774,10 +868,14 @@ export default function CouriersPage() {
     setSelectedCourier("");
     setDeliveryType("warehouse");
     setDeliveryStep(1);
+    setSelectedDeliveryCustomerId("");
     setSelectedProducts([]);
     setSelectedRoute(null);
     setRouteOptions([]);
+    setAssignWithoutRoute(false);
   };
+
+  const totalDeliverySteps = deliveryType === "client" ? 6 : 5;
 
   const handleSourceWarehouseChange = (warehouseId: string) => {
     setDeliveryFormData((prev) => ({
@@ -788,33 +886,88 @@ export default function CouriersPage() {
     setSelectedProducts([]);
   };
 
+  const geocodeWithNominatim = async (
+    query: string,
+    ...fallbackQueries: string[]
+  ): Promise<{ lat: string; lon: string; display_name: string } | null> => {
+    const opts: RequestInit = {
+      headers: { "User-Agent": "OmniWTMS-Delivery/1.0 (Route Planning)" },
+    };
+    const tryQuery = async (q: string) => {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+          q
+        )}&limit=1`,
+        opts
+      );
+      const data = await res.json();
+      return data && data[0] ? data[0] : null;
+    };
+    const delay = (ms: number) =>
+      new Promise((resolve) => setTimeout(resolve, ms));
+    let result = await tryQuery(query);
+    if (result) return result;
+    for (const fallback of fallbackQueries) {
+      if (!fallback) continue;
+      await delay(1100); // Nominatim allows 1 request per second
+      result = await tryQuery(fallback);
+      if (result) return result;
+    }
+    return null;
+  };
+
   const calculateRouteOptions = async (pickup: string, delivery: string) => {
     setIsCalculatingRoute(true);
     setMapError(null);
 
     try {
-      // First, geocode the addresses using Nominatim
-      const pickupResponse = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-          pickup
-        )}`
-      );
-      const deliveryResponse = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-          delivery
-        )}`
-      );
+      // Geocode pickup
+      const pickupData = await geocodeWithNominatim(pickup);
+      if (!pickupData) {
+        throw new Error(
+          "Could not find the pickup location. Check the source warehouse address."
+        );
+      }
 
-      const pickupData = await pickupResponse.json();
-      const deliveryData = await deliveryResponse.json();
-
-      if (!pickupData[0] || !deliveryData[0]) {
-        throw new Error("Could not find coordinates for one or both locations");
+      // Geocode delivery: try full address, then country-agnostic fallbacks
+      const countryMatch = delivery.match(/\b(United Kingdom|UK|Pakistan|India|USA|United States|Bangladesh|Germany|France|Canada|Australia|UAE|Saudi Arabia|Iran|Turkey|Egypt|Nigeria|South Africa|China|Japan)\b/i);
+      const country = countryMatch ? countryMatch[1] : "";
+      // Postcode: numeric (e.g. 75210) or UK-style (e.g. ST1 4DR, SW1A 1AA)
+      const postcodeNum = delivery.match(/\b(\d{4,6})\b/);
+      const postcodeUK = delivery.match(/\b([A-Za-z]{1,2}\d{1,2}[A-Za-z]?\s*\d[A-Za-z]{2})\b/i);
+      const postcode = postcodeUK ? postcodeUK[1].replace(/\s+/g, " ").trim() : (postcodeNum ? postcodeNum[1] : null);
+      const fallbacks: string[] = [];
+      if (postcode && country) fallbacks.push(`${postcode}, ${country}`);
+      else if (postcode) fallbacks.push(postcode);
+      // City + country: take the last comma-separated part before country as city, or a known pattern
+      const parts = delivery.split(/\s*,\s*/).map((p) => p.trim()).filter(Boolean);
+      if (parts.length >= 2 && country) {
+        const cityPart = parts.find((p, i) => i < parts.length - 1 && /^[A-Za-z\s\-']+$/.test(p) && p.length > 2);
+        if (cityPart) fallbacks.push(`${cityPart}, ${country}`);
+      }
+      // Well-known city+country fallbacks when address mentions them
+      if (/stoke-on-trent|stoke on trent/i.test(delivery) && /uk|united kingdom/i.test(delivery))
+        fallbacks.push("Stoke-on-Trent, United Kingdom");
+      if (/karachi/i.test(delivery)) {
+        if (/malir/i.test(delivery)) fallbacks.push("Malir, Karachi, Pakistan");
+        fallbacks.push("Karachi, Pakistan");
+      }
+      if (/lahore/i.test(delivery)) fallbacks.push("Lahore, Pakistan");
+      if (/islamabad/i.test(delivery)) fallbacks.push("Islamabad, Pakistan");
+      if (/rawalpindi/i.test(delivery)) fallbacks.push("Rawalpindi, Pakistan");
+      if (/london/i.test(delivery) && /uk|united kingdom/i.test(delivery)) fallbacks.push("London, United Kingdom");
+      if (/manchester/i.test(delivery) && /uk|united kingdom/i.test(delivery)) fallbacks.push("Manchester, United Kingdom");
+      if (/birmingham/i.test(delivery) && /uk|united kingdom/i.test(delivery)) fallbacks.push("Birmingham, United Kingdom");
+      const deliveryData = await geocodeWithNominatim(delivery, ...fallbacks);
+      if (!deliveryData) {
+        throw new Error(
+          "Could not find the delivery address. Try adding city and country (e.g. 'London, United Kingdom') or use a well-known landmark."
+        );
       }
 
       // Get coordinates
-      const pickupCoords = `${pickupData[0].lon},${pickupData[0].lat}`;
-      const deliveryCoords = `${deliveryData[0].lon},${deliveryData[0].lat}`;
+      const pickupCoords = `${pickupData.lon},${pickupData.lat}`;
+      const deliveryCoords = `${deliveryData.lon},${deliveryData.lat}`;
 
       // Get routes using OSRM
       const mainRouteResponse = await fetch(
@@ -863,7 +1016,7 @@ export default function CouriersPage() {
 
             const stops = [
               {
-                name: pickupData[0].display_name.split(",")[0],
+                name: pickupData.display_name.split(",")[0],
                 distance: 0,
                 duration: 0,
                 traffic: "Low",
@@ -891,7 +1044,7 @@ export default function CouriersPage() {
                 };
               }),
               {
-                name: deliveryData[0].display_name.split(",")[0],
+                name: deliveryData.display_name.split(",")[0],
                 distance: distanceInKm,
                 duration: durationInMinutes,
                 traffic: "Low",
@@ -927,10 +1080,10 @@ export default function CouriersPage() {
       setRouteOptions(options);
     } catch (error) {
       console.error("Error calculating routes:", error);
-      setMapError(
-        error instanceof Error ? error.message : "Failed to calculate routes"
-      );
-      toast.error("Failed to calculate route options");
+      const message =
+        error instanceof Error ? error.message : "Failed to calculate routes";
+      setMapError(message);
+      toast.error(message);
     } finally {
       setIsCalculatingRoute(false);
     }
@@ -956,6 +1109,7 @@ export default function CouriersPage() {
 
   const handleRouteSelect = (route: RouteOption) => {
     setSelectedRoute(route);
+    setAssignWithoutRoute(false);
     toast.success(`Selected route: ${route.name}`);
   };
 
@@ -980,8 +1134,8 @@ export default function CouriersPage() {
           toast.error("Please select a destination warehouse");
           return false;
         }
-        if (deliveryType === "client" && !deliveryFormData.client_address) {
-          toast.error("Please enter a client delivery address");
+        if (deliveryType === "client" && !selectedDeliveryCustomerId) {
+          toast.error("Please select a customer");
           return false;
         }
         return true;
@@ -994,13 +1148,42 @@ export default function CouriersPage() {
         return true;
 
       case 4:
-        if (!selectedRoute) {
-          toast.error("Please calculate and select a route");
+        if (deliveryType === "client") {
+          if (!deliveryFormData.client_address?.trim()) {
+            toast.error("Please enter the full customer delivery address");
+            return false;
+          }
+          if (!deliveryFormData.client_postal_code?.trim()) {
+            toast.error("Please enter the full post code. You cannot proceed without it.");
+            return false;
+          }
+          return true;
+        }
+        if (!selectedRoute && !assignWithoutRoute) {
+          toast.error("Please calculate and select a route, or use 'Assign with address only' below");
           return false;
         }
         return true;
 
       case 5:
+        if (deliveryType === "client") {
+          if (!selectedRoute && !assignWithoutRoute) {
+            toast.error("Please calculate and select a route, or use 'Assign with address only' below");
+            return false;
+          }
+          return true;
+        }
+        if (!deliveryFormData.pickup_time) {
+          toast.error("Please select a pickup time");
+          return false;
+        }
+        if (!deliveryFormData.priority) {
+          toast.error("Please select a priority level");
+          return false;
+        }
+        return true;
+
+      case 6:
         if (!deliveryFormData.pickup_time) {
           toast.error("Please select a pickup time");
           return false;
@@ -1052,6 +1235,20 @@ export default function CouriersPage() {
       );
 
       toast.success("POD uploaded and delivery marked as completed");
+
+      // Notify customer + org + admin, write audit + timeline
+      try {
+        await fetch("/api/notify-delivery-status", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            delivery_id: deliveryId,
+            new_status: "completed",
+            triggered_by: "organization",
+            pod_file: publicUrl,
+          }),
+        });
+      } catch (_) {}
     } catch (error) {
       console.error("Error uploading POD:", error);
       toast.error("Failed to upload POD");
@@ -1801,7 +1998,7 @@ export default function CouriersPage() {
         <DialogContent className="sm:max-w-[500px] w-[95vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>
-              Assign Delivery - Step {deliveryStep} of 5
+              Assign Delivery - Step {deliveryStep} of {totalDeliverySteps}
             </DialogTitle>
           </DialogHeader>
 
@@ -1820,7 +2017,7 @@ export default function CouriersPage() {
                     required
                   >
                     <option value="warehouse">Warehouse to Warehouse</option>
-                    <option value="client">Warehouse to Client Address</option>
+                    <option value="client">Warehouse to Customer Address</option>
                   </select>
                 </div>
 
@@ -1843,7 +2040,7 @@ export default function CouriersPage() {
               </div>
             )}
 
-            {/* Step 2: Location Details */}
+            {/* Step 2: Location Details (Warehouse) or Source + Customer (Customer Address) */}
             {deliveryStep === 2 && (
               <div className="space-y-4">
                 <div className="space-y-2">
@@ -1893,28 +2090,41 @@ export default function CouriersPage() {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <Label>Client Delivery Address</Label>
-                    <Input
-                      value={deliveryFormData.client_address}
-                      onChange={(e) =>
-                        setDeliveryFormData((prev) => ({
-                          ...prev,
-                          client_address: e.target.value,
-                        }))
-                      }
-                      placeholder="Enter delivery address"
+                    <Label>Select Customer</Label>
+                    <select
+                      className="w-full p-2 border rounded-md"
+                      value={selectedDeliveryCustomerId}
+                      onChange={(e) => setSelectedDeliveryCustomerId(e.target.value)}
                       required
-                    />
+                    >
+                      <option value="">Select a customer</option>
+                      {customers.map((customer) => (
+                        <option key={customer.id} value={customer.id}>
+                          {customer.name}
+                          {customer.contact_number ? ` - ${customer.contact_number}` : ""}
+                          {customer.email ? ` (${customer.email})` : ""}
+                        </option>
+                      ))}
+                    </select>
+                    {customers.length === 0 && (
+                      <p className="text-sm text-amber-600">
+                        No customers added yet. Add customers from Dashboard → Customers first.
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
             )}
 
-            {/* Step 3: Products */}
+            {/* Step 3: Products (assign products to customer when client type) */}
             {deliveryStep === 3 && (
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Select Products from Warehouse</Label>
+                  <Label>
+                    {deliveryType === "client"
+                      ? "Assign products to customer"
+                      : "Select Products from Warehouse"}
+                  </Label>
                   {warehouseProducts.length === 0 ? (
                     <p className="text-sm text-gray-500">
                       No products available in selected warehouse
@@ -1984,8 +2194,45 @@ export default function CouriersPage() {
               </div>
             )}
 
-            {/* Step 4: Route Optimization */}
-            {deliveryStep === 4 && (
+            {/* Step 4 (client only): Full customer address + Post code */}
+            {deliveryStep === 4 && deliveryType === "client" && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Full Customer Delivery Address</Label>
+                  <Input
+                    value={deliveryFormData.client_address}
+                    onChange={(e) =>
+                      setDeliveryFormData((prev) => ({
+                        ...prev,
+                        client_address: e.target.value,
+                      }))
+                    }
+                    placeholder="Enter full address (street, city, area)"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Post Code (required)</Label>
+                  <Input
+                    value={deliveryFormData.client_postal_code}
+                    onChange={(e) =>
+                      setDeliveryFormData((prev) => ({
+                        ...prev,
+                        client_postal_code: e.target.value.trim(),
+                      }))
+                    }
+                    placeholder="Enter full post code"
+                    required
+                  />
+                  <p className="text-xs text-amber-600">
+                    You cannot proceed to the next step without entering the post code.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Step 4 (warehouse) / Step 5 (client): Route Optimization */}
+            {deliveryStep === 4 && deliveryType === "warehouse" && (
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label>Route Optimization</Label>
@@ -2166,11 +2413,220 @@ export default function CouriersPage() {
                     )}
                   </div>
                 </div>
+                <div className="pt-3 border-t mt-3">
+                  <p className="text-sm text-muted-foreground mb-2">No route needed?</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setAssignWithoutRoute(true);
+                      setSelectedRoute(null);
+                      toast.success("Assign with address only. Click Next to continue.");
+                    }}
+                    className={assignWithoutRoute ? "border-green-500 bg-green-50 text-green-800" : ""}
+                  >
+                    {assignWithoutRoute ? "✓ Assign with address only (selected)" : "Assign with address only (no route)"}
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-1">Courier will see the full address and can mark as completed.</p>
+                </div>
               </div>
             )}
 
-            {/* Step 5: Delivery Details */}
-            {deliveryStep === 5 && (
+            {deliveryStep === 5 && deliveryType === "client" && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Route Optimization</Label>
+                  <div className="p-4 border rounded-md max-h-[400px] overflow-y-auto">
+                    {isCalculatingRoute ? (
+                      <div className="text-center py-4">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-2" />
+                        <p>Calculating optimal routes...</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {routeOptions.length === 0 ? (
+                          <Button
+                            type="button"
+                            onClick={() => {
+                              const pickup =
+                                deliveryFormData.source_warehouse_id
+                                  ? warehouses.find(
+                                      (w) =>
+                                        w.id ===
+                                        deliveryFormData.source_warehouse_id
+                                    )?.location
+                                  : "";
+                              const delivery = [deliveryFormData.client_address, deliveryFormData.client_postal_code].filter(Boolean).join(", ");
+
+                              if (!pickup || !delivery) {
+                                toast.error(
+                                  "Missing pickup or delivery location"
+                                );
+                                return;
+                              }
+
+                              calculateRouteOptions(pickup, delivery);
+                            }}
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-sm"
+                          >
+                            Calculate Routes
+                          </Button>
+                        ) : (
+                          <div className="space-y-2">
+                            {routeOptions.map((route, index) => (
+                              <div
+                                key={index}
+                                className={`p-2 border rounded-lg cursor-pointer transition-colors ${
+                                  selectedRoute?.id === route.id
+                                    ? "border-blue-500 bg-blue-50"
+                                    : "hover:border-gray-400"
+                                }`}
+                                onClick={() => handleRouteSelect(route)}
+                              >
+                                <div className="flex justify-between items-center mb-2">
+                                  <div>
+                                    <p className="font-medium">{route.name}</p>
+                                    <p className="text-xs text-gray-600">
+                                      {route.description}
+                                    </p>
+                                  </div>
+                                  {route.id === 1 && (
+                                    <Badge
+                                      variant="success"
+                                      className="text-xs"
+                                    >
+                                      Recommended
+                                    </Badge>
+                                  )}
+                                </div>
+
+                                <div className="grid grid-cols-4 gap-2 text-xs mb-2 bg-gray-50 p-2 rounded">
+                                  <div>
+                                    <p className="text-gray-500">Distance</p>
+                                    <p className="font-medium">
+                                      {route.distance.toFixed(1)} km
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-gray-500">Duration</p>
+                                    <p className="font-medium">
+                                      {route.duration.toFixed(0)} min
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-gray-500">Fuel</p>
+                                    <p className="font-medium">
+                                      {route.fuelConsumption.toFixed(1)}L
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-gray-500">Cost</p>
+                                    <p className="font-medium">
+                                      ₨{route.totalFuelCost.toFixed(0)}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <div className="text-xs space-y-1">
+                                  <div className="flex items-center gap-1 text-green-600">
+                                    <Map className="h-3 w-3" />
+                                    <p className="font-medium">Stops:</p>
+                                  </div>
+                                  <div className="space-y-1 ml-4">
+                                    {route.stops.map(
+                                      (stop: any, currentIndex: number) => (
+                                        <div
+                                          key={currentIndex}
+                                          className="flex items-start gap-3 p-2 border rounded-lg"
+                                        >
+                                          <div
+                                            className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0
+                                          ${
+                                            currentIndex === 0
+                                              ? "bg-blue-100 text-blue-600"
+                                              : currentIndex ===
+                                                route.stops.length - 1
+                                              ? "bg-green-100 text-green-600"
+                                              : "bg-gray-100 text-gray-600"
+                                          }`}
+                                          >
+                                            {currentIndex + 1}
+                                          </div>
+                                          <div className="flex-1 truncate">
+                                            {stop.name}
+                                            {currentIndex === 0 && (
+                                              <span className="text-blue-600 ml-1">
+                                                (Start)
+                                              </span>
+                                            )}
+                                            {currentIndex ===
+                                              route.stops.length - 1 && (
+                                              <span className="text-green-600 ml-1">
+                                                (End)
+                                              </span>
+                                            )}
+                                          </div>
+                                        </div>
+                                      )
+                                    )}
+                                  </div>
+                                </div>
+
+                                {route.advantages.length > 0 && (
+                                  <div className="mt-2">
+                                    <div className="flex gap-1 flex-wrap">
+                                      {route.advantages.map((advantage, i) => (
+                                        <Badge
+                                          key={i}
+                                          variant="outline"
+                                          className="bg-green-50 text-xs py-0"
+                                        >
+                                          {advantage}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => {
+                                setRouteOptions([]);
+                                setSelectedRoute(null);
+                              }}
+                              className="w-full mt-2 bg-gray-50 hover:bg-gray-100 border-gray-200 text-gray-700 font-medium"
+                            >
+                              Recalculate Routes
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="pt-3 border-t mt-3">
+                  <p className="text-sm text-muted-foreground mb-2">No route needed?</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setAssignWithoutRoute(true);
+                      setSelectedRoute(null);
+                      toast.success("Assign with address only. Click Next to continue.");
+                    }}
+                    className={assignWithoutRoute ? "border-green-500 bg-green-50 text-green-800" : ""}
+                  >
+                    {assignWithoutRoute ? "✓ Assign with address only (selected)" : "Assign with address only (no route)"}
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-1">Courier will see the full address and can mark as completed.</p>
+                </div>
+              </div>
+            )}
+
+            {/* Step 5 (warehouse) / Step 6 (client): Delivery Details */}
+            {((deliveryStep === 5 && deliveryType === "warehouse") || (deliveryStep === 6 && deliveryType === "client")) && (
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label>Priority</Label>
@@ -2241,7 +2697,7 @@ export default function CouriersPage() {
                 {deliveryStep === 1 ? "Cancel" : "Back"}
               </Button>
 
-              {deliveryStep < 5 ? (
+              {deliveryStep < totalDeliverySteps ? (
                 <Button
                   type="button"
                   onClick={() => {
@@ -2256,7 +2712,7 @@ export default function CouriersPage() {
               ) : (
                 <Button
                   type="submit"
-                  disabled={isLoading || !validateStep(5)}
+                  disabled={isLoading || !validateStep(totalDeliverySteps)}
                   className="bg-green-600 hover:bg-green-700 text-white font-medium shadow-sm"
                 >
                   {isLoading ? "Assigning..." : "Assign Delivery"}
