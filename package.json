@@ -115,6 +115,7 @@
     "react-konva": "^18.2.14",
     "react-leaflet": "^4.2.1",
     "react-map-gl": "^8.0.1",
+    "resend": "^4.0.0",
     "react-resizable-panels": "^3.0.1",
     "react-responsive": "^10.0.1",
     "recharts": "^2.12.2",

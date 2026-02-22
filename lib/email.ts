@@ -1,10 +1,11 @@
 import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1500;
 
 /**
- * Send email via SMTP. Uses EMAIL_USER and EMAIL_PASS from env.
+ * Send email via Resend (if RESEND_API_KEY set) or SMTP (EMAIL_USER, EMAIL_PASS).
  * Retries up to MAX_RETRIES on failure. Used by /api/send-email and /api/notify-delivery-status.
  */
 export async function sendEmail(options: {
@@ -13,10 +14,37 @@ export async function sendEmail(options: {
   html: string;
   text?: string;
 }): Promise<void> {
+  const toList = Array.isArray(options.to) ? options.to : [options.to];
+  const resendKey = process.env.RESEND_API_KEY?.trim();
+
+  if (resendKey) {
+    const resend = new Resend(resendKey);
+    const from = process.env.RESEND_FROM || process.env.EMAIL_USER || "OmniWTMS <onboarding@resend.dev>";
+    let lastError: Error | null = null;
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const { error } = await resend.emails.send({
+          from,
+          to: toList,
+          subject: options.subject,
+          html: options.html,
+        });
+        if (error) throw new Error(error.message);
+        return;
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error(String(err));
+        if (attempt < MAX_RETRIES) {
+          await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+        }
+      }
+    }
+    throw lastError ?? new Error("Send email failed");
+  }
+
   const user = process.env.EMAIL_USER;
   const pass = process.env.EMAIL_PASS;
   if (!user || !pass) {
-    throw new Error("EMAIL_USER or EMAIL_PASS not set");
+    throw new Error("EMAIL_USER and EMAIL_PASS required when RESEND_API_KEY is not set");
   }
   const transporter = nodemailer.createTransport({
     host: "smtp.gmail.com",
@@ -24,7 +52,6 @@ export async function sendEmail(options: {
     secure: false,
     auth: { user, pass },
   });
-  const toList = Array.isArray(options.to) ? options.to : [options.to];
   const mailOptions = {
     from: `"OmniWTMS" <${user}>`,
     to: toList.join(", "),
