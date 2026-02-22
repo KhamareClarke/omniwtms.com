@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { sendEmail } from "@/lib/email";
+import { sendEmail, brandedEmailHtml } from "@/lib/email";
+import { emitDeliveryAssigned } from "@/lib/events";
 
 const supabaseUrl =
   process.env.NEXT_PUBLIC_SUPABASE_URL ||
@@ -27,17 +28,36 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "delivery_id and package_id required" }, { status: 400 });
     }
 
+    // Internal event architecture: emit for listeners
+    emitDeliveryAssigned({
+      delivery_id: deliveryId,
+      package_id: packageId,
+      courier_name,
+      pickup,
+      delivery_to,
+    });
+
+    const clientIp =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      null;
+    const metadata: Record<string, unknown> = { package_id: packageId };
+    if (clientIp) metadata.ip = clientIp;
+
     const supabase = createClient(supabaseUrl, serviceRoleKey);
     try {
       await sendEmail({
         to: adminEmail,
         subject: `[OmniWTMS] New delivery assigned: ${packageId}`,
-        html: `<p><strong>New delivery assigned</strong> (admin notification)</p>
+        html: brandedEmailHtml(
+          `<p><strong>New delivery assigned</strong> (admin notification)</p>
 <p><strong>Package ID:</strong> ${packageId}</p>
 <p><strong>Pickup:</strong> ${pickup || "—"}</p>
 <p><strong>Delivery to:</strong> ${delivery_to || "—"}</p>
 <p><strong>Courier:</strong> ${courier_name || "—"}</p>
 <p>Check the dashboard for full details.</p>`,
+          "New Delivery Assigned"
+        ),
       });
     } catch (e) {
       console.error("Admin assign email failed:", e);
@@ -48,7 +68,7 @@ export async function POST(request: NextRequest) {
         action: "delivery_assigned",
         actor_type: "organization",
         new_value: packageId,
-        metadata: { package_id: packageId },
+        metadata,
       });
     } catch (_) {}
     try {

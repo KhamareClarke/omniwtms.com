@@ -2679,12 +2679,13 @@ export default function DashboardPage() {
                           <TableHead>Actor</TableHead>
                           <TableHead>Old → New</TableHead>
                           <TableHead>POD</TableHead>
+                          <TableHead>IP</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {adminAuditLog.length === 0 && !adminAuditLoading ? (
                           <TableRow>
-                            <TableCell colSpan={6} className="text-center py-8">
+                            <TableCell colSpan={7} className="text-center py-8">
                               <div className="text-gray-500 space-y-1">
                                 {adminAuditMigrationSuggested ? (
                                   <>
@@ -2726,6 +2727,9 @@ export default function DashboardPage() {
                                 ) : (
                                   "—"
                                 )}
+                              </TableCell>
+                              <TableCell className="text-xs text-gray-500">
+                                {entry.metadata?.ip ?? "—"}
                               </TableCell>
                             </TableRow>
                           );

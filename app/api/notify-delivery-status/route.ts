@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { sendEmail } from "@/lib/email";
+import { sendEmail, brandedEmailHtml } from "@/lib/email";
+import { emitStatusUpdated } from "@/lib/events";
+import "@/services/listeners/delivery";
+
+function getClientIp(request: NextRequest): string | null {
+  return (
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
+    null
+  );
+}
 
 const supabaseUrl =
   process.env.NEXT_PUBLIC_SUPABASE_URL ||
@@ -69,6 +79,24 @@ export async function POST(request: NextRequest) {
     const previousStatus = (delivery as any).status;
     const podFile = (delivery as any).pod_file || podFileFromBody;
 
+    // Internal event architecture: emit for listeners (email, audit, notifications, future stock/webhooks)
+    emitStatusUpdated({
+      delivery_id: deliveryId,
+      package_id: packageId,
+      old_status: previousStatus,
+      new_status: newStatus,
+      triggered_by: triggeredBy === "organization" ? "organization" : "courier",
+      pod_file: podFile || undefined,
+      metadata: { package_id: packageId },
+    });
+
+    const clientIp = getClientIp(request);
+    const auditMeta = (extra: Record<string, unknown> = {}) => ({
+      package_id: packageId,
+      ...(clientIp ? { ip: clientIp } : {}),
+      ...extra,
+    });
+
     // Always write audit + timeline (even when email not configured)
     try {
       await supabase.from("delivery_audit_log").insert({
@@ -77,7 +105,7 @@ export async function POST(request: NextRequest) {
         actor_type: triggeredBy === "organization" ? "organization" : "courier",
         old_value: previousStatus,
         new_value: newStatus,
-        metadata: { package_id: packageId, ...(podFile && newStatus === "completed" ? { pod_file: podFile } : {}) },
+        metadata: auditMeta(podFile && newStatus === "completed" ? { pod_file: podFile } : {}),
       });
     } catch (e) {
       console.warn("Audit log insert skipped:", e);
@@ -89,7 +117,7 @@ export async function POST(request: NextRequest) {
           action: "pod_uploaded",
           actor_type: triggeredBy === "organization" ? "organization" : "courier",
           new_value: podFile,
-          metadata: { package_id: packageId },
+          metadata: auditMeta(),
         });
       } catch (e) {
         console.warn("Audit pod_uploaded insert skipped:", e);
@@ -114,7 +142,7 @@ export async function POST(request: NextRequest) {
       ? `<p><strong>Proof of delivery:</strong> <a href="${podFile}" target="_blank" rel="noopener">View POD</a></p>`
       : "";
 
-    const baseHtml = `
+    const baseContent = `
       <p><strong>Delivery status update</strong></p>
       <p><strong>Package ID:</strong> ${packageId}</p>
       <p><strong>New status:</strong> ${statusLabel}</p>
@@ -125,7 +153,6 @@ export async function POST(request: NextRequest) {
 
     let emailed = false;
     if (emailConfigured) {
-      // Organization: only when org triggered the update (so org sees its own status changes, not when courier updates)
       const orgEmail =
         (delivery.clients as { email?: string } | null)?.email?.trim?.() || "";
       if (sendToOrg && orgEmail && triggeredBy === "organization") {
@@ -133,7 +160,7 @@ export async function POST(request: NextRequest) {
           await sendEmail({
             to: orgEmail,
             subject: `Delivery ${statusLabel}: ${packageId}`,
-            html: `<p>Delivery status has been updated.</p>${baseHtml}`,
+            html: brandedEmailHtml(`<p>Delivery status has been updated.</p>${baseContent}`, `Delivery ${statusLabel}`),
           });
           emailed = true;
         } catch (e) {
@@ -141,19 +168,18 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Customer: ONLY when organization updates status (never when courier updates)
       const customerRow = delivery.customers as { email?: string; name?: string } | null;
       const customerEmail = customerRow?.email?.trim?.() || "";
       if (customerEmail && triggeredBy === "organization") {
         try {
           const name = customerRow?.name ? ` ${customerRow.name}` : "";
+          const customerContent = `<p>Hello${name},</p><p>Your parcel delivery status has been updated.</p>${baseContent}
+<p><strong>Your tracking number:</strong> <code style="background:#f0f0f0;padding:2px 6px;border-radius:4px;">${packageId}</code></p>
+<p>Track your delivery anytime at <strong>Track</strong> (no login required) or in the customer dashboard.</p>`;
           await sendEmail({
             to: customerEmail,
             subject: newStatus === "completed" ? `Your delivery has been delivered – ${packageId}` : `Your delivery is ${statusLabel.toLowerCase()} – ${packageId}`,
-            html: `<p>Hello${name},</p><p>Your parcel delivery status has been updated.</p>${baseHtml}
-<p><strong>Your tracking number:</strong> <code style="background:#f0f0f0;padding:2px 6px;border-radius:4px;">${packageId}</code></p>
-<p>Log in to the customer dashboard and go to <strong>Track Delivery</strong>. Enter this tracking number to see complete tracking, expected arrival, and progress.</p>
-<p>You can also view it in <strong>My Deliveries</strong>.</p>`,
+            html: brandedEmailHtml(customerContent, "Delivery Update"),
           });
           emailed = true;
         } catch (e) {
@@ -166,10 +192,10 @@ export async function POST(request: NextRequest) {
           await sendEmail({
             to: adminEmail,
             subject: `[OmniWTMS] Delivery ${statusLabel}: ${packageId}`,
-            html: `<p><strong>Delivery status update</strong> (admin notification)</p>
-${baseHtml}
-<p><strong>Triggered by:</strong> ${triggeredBy === "organization" ? "Organization" : "Courier"}</p>
-<p>Customer and organization have been notified where applicable.</p>`,
+            html: brandedEmailHtml(
+              `${baseContent}<p><strong>Triggered by:</strong> ${triggeredBy === "organization" ? "Organization" : "Courier"}</p><p>Customer and organization have been notified where applicable.</p>`,
+              "Admin: Delivery Update"
+            ),
           });
           emailed = true;
         } catch (e) {
@@ -181,7 +207,7 @@ ${baseHtml}
             action: "email_sent",
             actor_type: "system",
             new_value: "admin",
-            metadata: { to: adminEmail, subject: `Delivery ${statusLabel}: ${packageId}` },
+            metadata: auditMeta({ to: adminEmail, subject: `Delivery ${statusLabel}: ${packageId}` }),
           });
         } catch (_) {}
       }
