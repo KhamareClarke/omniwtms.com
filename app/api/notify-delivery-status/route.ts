@@ -23,7 +23,7 @@ const serviceRoleKey =
  * POST /api/notify-delivery-status
  * Body: { delivery_id: string, new_status: string, notify_organization?: boolean, triggered_by?: "organization" | "courier" }
  * Customer receives email ONLY when triggered_by === "organization".
- * When courier updates: audit/timeline + admin email only (no customer, no org email).
+ * When courier updates: audit/timeline + email to organization and admin (no customer). Org can then update status to notify customer.
  * When organization updates: customer email + admin; org email only if sendToOrg.
  */
 export async function POST(request: NextRequest) {
@@ -37,7 +37,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    const emailConfigured = process.env.EMAIL_USER != null && process.env.EMAIL_PASS != null;
+    const emailConfigured =
+      (process.env.EMAIL_USER != null && process.env.EMAIL_PASS != null) ||
+      (process.env.RESEND_API_KEY != null && process.env.RESEND_API_KEY.trim() !== "");
     const adminEmail = (process.env.ADMIN_EMAIL || "clarkekhamare@gmail.com").trim();
     const statusLabel =
       newStatus === "completed"
@@ -155,6 +157,8 @@ export async function POST(request: NextRequest) {
     if (emailConfigured) {
       const orgEmail =
         (delivery.clients as { email?: string } | null)?.email?.trim?.() || "";
+
+      // Organization when org triggered (status update from dashboard)
       if (sendToOrg && orgEmail && triggeredBy === "organization") {
         try {
           await sendEmail({
@@ -165,6 +169,26 @@ export async function POST(request: NextRequest) {
           emailed = true;
         } catch (e) {
           console.error("Notify org email failed:", e);
+        }
+      }
+
+      // Organization when courier performed action: so org knows and can update status → then customer gets notified
+      if (orgEmail && triggeredBy === "courier") {
+        try {
+          const courierActionContent = `
+            <p><strong>Courier activity</strong></p>
+            <p>Your courier has reported a delivery update. Only you can confirm the order status; when you update the status in the dashboard, the customer will be notified.</p>
+            ${baseContent}
+            <p><strong>Action:</strong> Update this delivery’s status in the dashboard if you want to notify the customer.</p>
+          `;
+          await sendEmail({
+            to: orgEmail,
+            subject: `[OmniWTMS] Courier activity – ${statusLabel}: ${packageId}`,
+            html: brandedEmailHtml(courierActionContent, "Courier Activity"),
+          });
+          emailed = true;
+        } catch (e) {
+          console.error("Notify org (courier activity) email failed:", e);
         }
       }
 
@@ -189,11 +213,15 @@ export async function POST(request: NextRequest) {
 
       if (adminEmail) {
         try {
+          const adminNote =
+            triggeredBy === "organization"
+              ? "Customer and organization have been notified where applicable."
+              : "Organization has been notified of courier activity. Customer is notified only when organization updates status.";
           await sendEmail({
             to: adminEmail,
             subject: `[OmniWTMS] Delivery ${statusLabel}: ${packageId}`,
             html: brandedEmailHtml(
-              `${baseContent}<p><strong>Triggered by:</strong> ${triggeredBy === "organization" ? "Organization" : "Courier"}</p><p>Customer and organization have been notified where applicable.</p>`,
+              `${baseContent}<p><strong>Triggered by:</strong> ${triggeredBy === "organization" ? "Organization" : "Courier"}</p><p>${adminNote}</p>`,
               "Admin: Delivery Update"
             ),
           });
